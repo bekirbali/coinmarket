@@ -1,0 +1,181 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { useState } from "react";
+
+export default function DrawMoney() {
+  const [selectedPlan, setSelectedPlan] = useState(null);
+
+  const plans = [
+    {
+      id: 1,
+      name: "3 aylık plan",
+      description:
+        "Kısa vadeli yatırım için uygundur. Başlangıç seviyesi için mükemmel.",
+      price: "$299",
+      features: [
+        "Haftalık çekimler",
+        "Temel müşteri desteği",
+        "Başlangıç seviyesi coinlere erişim",
+        "Mobil uygulama erişimi",
+      ],
+      color: "bg-blue-600",
+      accent: "border-blue-700",
+    },
+    {
+      id: 2,
+      name: "6 aylık plan",
+      description: "En popüler seçenek, dengeli avantajlar ve sürekliliği ile.",
+      price: "$499",
+      features: [
+        "Haftalık çekimler",
+        "Öncelikli müşteri desteği",
+        "Tüm coinlere erişim",
+        "Mobil uygulama erişimi",
+        "Aylık strateji toplantısı",
+      ],
+      color: "bg-purple-700",
+      accent: "border-purple-800",
+      recommended: true,
+    },
+    {
+      id: 3,
+      name: "1 yıllık plan",
+      description:
+        "En yüksek getiriler için premium uzun vadeli yatırım seçeneği.",
+      price: "$899",
+      features: [
+        "Günlük çekimler",
+        "24/7 VIP müşteri desteği",
+        "Özel coinlere erişim",
+        "Mobil uygulama erişimi",
+        "Haftalık strateji toplantıları",
+        "Yeni özelliklere erken erişim",
+        "Kişisel yatırım danışmanı",
+      ],
+      color: "bg-yellow-600",
+      accent: "border-yellow-700",
+    },
+  ];
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.1 },
+    },
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto p-8">
+      <motion.div
+        className="text-center mb-12"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-4xl md:text-5xl font-bold mb-4">Draw Your Money</h1>
+        <div className="w-24 h-1 bg-yellow-400 mx-auto mb-6"></div>
+        <p className="text-lg max-w-2xl mx-auto">
+          Choose the payment plan that works best for you and start drawing
+          money from your coin investments. Our flexible plans are designed to
+          fit various investment strategies.
+        </p>
+      </motion.div>
+
+      <motion.div
+        className="grid md:grid-cols-3 gap-8"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {plans.map((plan) => (
+          <motion.div
+            key={plan.id}
+            className={`rounded-xl overflow-hidden shadow-lg border-2 h-full flex flex-col ${
+              selectedPlan === plan.id ? plan.accent : "border-transparent"
+            } transition-all hover:bg-gray-50 hover:border-current`}
+            variants={itemVariants}
+            onClick={() => setSelectedPlan(plan.id)}
+          >
+            <div className={`${plan.color} text-white p-6 relative`}>
+              {plan.recommended && (
+                <div className="absolute top-0 right-0 bg-yellow-300 text-black font-bold py-1 px-4 transform translate-x-8 translate-y-4 rotate-45">
+                  BEST VALUE
+                </div>
+              )}
+              <h2 className="text-2xl font-bold mb-1">{plan.name}</h2>
+              <p className="text-white mb-4">{plan.description}</p>
+              <div className="text-4xl font-bold">{plan.price}</div>
+            </div>
+
+            <div className="p-6 bg-white flex-grow flex flex-col">
+              <ul className="mb-8 space-y-3 flex-grow text-gray-800">
+                {plan.features.map((feature, index) => (
+                  <li key={index} className="flex items-center">
+                    <svg
+                      className="h-5 w-5 text-green-500 mr-2 flex-shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+
+              <motion.button
+                className={`w-full py-3 px-4 rounded-lg font-bold text-white ${plan.color} hover:opacity-90 transition-opacity mt-auto border-2 border-white shadow-md`}
+                whileTap={{ scale: 0.95 }}
+              >
+                Planı Seç
+              </motion.button>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {selectedPlan && (
+        <motion.div
+          className="mt-12 p-8 bg-gray-100 rounded-lg"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          transition={{ duration: 0.3 }}
+        >
+          <h3 className="text-2xl font-bold mb-4 text-gray-900">
+            {plans.find((p) => p.id === selectedPlan)?.name}' ı seçtiniz.
+          </h3>
+          <p className="mb-4 text-gray-800">
+            İyi seçim! Lütfen ödeme bilgilerinizi tamamlayarak yatırımınızdan
+            para çekmeye başlayın.
+          </p>
+          <motion.button
+            className="bg-black text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-800 transition-colors shadow-md"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Ödeme Bilgilerini Tamamla
+          </motion.button>
+        </motion.div>
+      )}
+    </div>
+  );
+}

@@ -34,3 +34,16 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+A 3-page website, about coins. pages will be
+-home
+-about us
+-draw money
+
+we will use framer for better transitions and animations, site will be basic and user friendly.
+
+-In home page there should be a gif about "mining coins" and a wallet counter. The counter should start from 0 and go up for +100 dollars every 10 seconds.
+
+In about us page there should be brief introduction about us, and contact info
+
+In draw money page, there should be 3 different payment plan options; "3 months plan", "6 months plan" and "1 year plan"
