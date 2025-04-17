@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { parse } from "next/dist/build/swc/generated-native";
 
 export default function Home() {
   const [walletAmount, setWalletAmount] = useState(0);
@@ -12,23 +13,26 @@ export default function Home() {
     const storedAmount = localStorage.getItem("walletAmount");
     const lastUpdateTime = localStorage.getItem("lastUpdateTime");
     const currentTime = Date.now();
+    const FOUR_HOURS = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
+    const INCREMENT = 11.52; // Increment amount every 4 hours
 
     if (storedAmount && lastUpdateTime) {
       // Calculate time elapsed since last update (in milliseconds)
       const timeElapsed = currentTime - parseInt(lastUpdateTime);
 
-      // Calculate how many 10-second intervals have passed (10000ms = 10s)
-      const intervalsElapsed = Math.floor(timeElapsed / 10000);
+      // Calculate how many 4-hour intervals have passed
+      const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
-      // Add $100 for each interval that passed while user was away
-      const newAmount = parseInt(storedAmount) + intervalsElapsed * 100;
-      setWalletAmount(newAmount);
+      // Add $11.52 for each interval that passed while user was away
+      const newAmount = parseFloat(storedAmount) + intervalsElapsed * INCREMENT;
+      const roundedAmount = parseFloat(newAmount.toFixed(2));
+      setWalletAmount(roundedAmount);
 
       // Save the updated amount
-      localStorage.setItem("walletAmount", newAmount.toString());
+      localStorage.setItem("walletAmount", roundedAmount.toString());
     } else if (storedAmount) {
       // If we have an amount but no timestamp, just use the stored amount
-      setWalletAmount(parseInt(storedAmount));
+      setWalletAmount(parseFloat(storedAmount));
     }
 
     // Save current timestamp
@@ -36,14 +40,14 @@ export default function Home() {
 
     const interval = setInterval(() => {
       setWalletAmount((prev) => {
-        const newAmount = prev + 100;
+        const newAmount = parseFloat((prev + INCREMENT).toFixed(2));
         // Save to localStorage whenever it changes
         localStorage.setItem("walletAmount", newAmount.toString());
         // Update timestamp
         localStorage.setItem("lastUpdateTime", Date.now().toString());
         return newAmount;
       });
-    }, 10000); // Increment by $100 every 10 seconds
+    }, FOUR_HOURS); // Increment by $11.52 every 4 hours
 
     return () => clearInterval(interval);
   }, []);

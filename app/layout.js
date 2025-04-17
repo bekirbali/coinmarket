@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Link from "next/link";
+import Navbar from "./components/Navbar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Coin Website",
+  title: "BTC Mining",
   description: "Modern coin website with interactive elements",
 };
 
@@ -24,37 +24,7 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <header className="bg-black text-white p-4">
-          <nav className="max-w-6xl mx-auto flex justify-between items-center">
-            <Link href="/" className="text-xl font-bold">
-              CoinSite
-            </Link>
-            <ul className="flex gap-6">
-              <li>
-                <Link
-                  href="/"
-                  className="hover:text-yellow-400 transition-colors"
-                >
-                  Ana Sayfa
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/about"
-                  className="hover:text-yellow-400 transition-colors"
-                >
-                  Hakkımızda
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/draw-money"
-                  className="hover:text-yellow-400 transition-colors"
-                >
-                  Para Çek
-                </Link>
-              </li>
-            </ul>
-          </nav>
+          <Navbar />
         </header>
         <main className="min-h-screen">{children}</main>
         <footer className="bg-black text-white p-4 text-center">
