@@ -9,45 +9,42 @@ export default function Home() {
   const [walletAmount, setWalletAmount] = useState(0);
 
   useEffect(() => {
-    // Load wallet amount and last update timestamp from localStorage
     const storedAmount = localStorage.getItem("walletAmount");
     const lastUpdateTime = localStorage.getItem("lastUpdateTime");
     const currentTime = Date.now();
-    const FOUR_HOURS = 4 * 60 * 60 * 1000; // 4 hours in milliseconds
-    const INCREMENT = 11.52; // Increment amount every 4 hours
+    const FOUR_HOURS = 4 * 60 * 60 * 1000;
+    const INCREMENT = 11.52;
 
     if (storedAmount && lastUpdateTime) {
-      // Calculate time elapsed since last update (in milliseconds)
       const timeElapsed = currentTime - parseInt(lastUpdateTime);
-
-      // Calculate how many 4-hour intervals have passed
       const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
-      // Add $11.52 for each interval that passed while user was away
-      const newAmount = parseFloat(storedAmount) + intervalsElapsed * INCREMENT;
-      const roundedAmount = parseFloat(newAmount.toFixed(2));
-      setWalletAmount(roundedAmount);
+      if (intervalsElapsed > 0) {
+        const newAmount =
+          parseFloat(storedAmount) + intervalsElapsed * INCREMENT;
+        const roundedAmount = parseFloat(newAmount.toFixed(2));
+        setWalletAmount(roundedAmount);
+        localStorage.setItem("walletAmount", roundedAmount.toString());
 
-      // Save the updated amount
-      localStorage.setItem("walletAmount", roundedAmount.toString());
+        // Son artış zamanını ayarla:
+        const newTimestamp =
+          parseInt(lastUpdateTime) + intervalsElapsed * FOUR_HOURS;
+        localStorage.setItem("lastUpdateTime", newTimestamp.toString());
+      } else {
+        setWalletAmount(parseFloat(storedAmount));
+      }
     } else if (storedAmount) {
-      // If we have an amount but no timestamp, just use the stored amount
       setWalletAmount(parseFloat(storedAmount));
     }
-
-    // Save current timestamp
-    localStorage.setItem("lastUpdateTime", currentTime.toString());
 
     const interval = setInterval(() => {
       setWalletAmount((prev) => {
         const newAmount = parseFloat((prev + INCREMENT).toFixed(2));
-        // Save to localStorage whenever it changes
         localStorage.setItem("walletAmount", newAmount.toString());
-        // Update timestamp
         localStorage.setItem("lastUpdateTime", Date.now().toString());
         return newAmount;
       });
-    }, FOUR_HOURS); // Increment by $11.52 every 4 hours
+    }, FOUR_HOURS);
 
     return () => clearInterval(interval);
   }, []);
