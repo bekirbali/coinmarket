@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { motion } from "framer-motion";
-import { parse } from "next/dist/build/swc/generated-native";
 
 export default function Home() {
   const [walletAmount, setWalletAmount] = useState(0);

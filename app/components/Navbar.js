@@ -14,10 +14,10 @@ export default function Navbar() {
     <>
       <nav className="max-w-6xl mx-auto flex justify-between items-center">
         <Link href="/" className="text-xl font-bold">
-          CoinSite
+          BTC Mining
         </Link>
 
-        {/* Mobile Menu Button (hamburger) */}
+        {/* Mobile Menu Button (hamburger menu) */}
         <button
           className="md:hidden flex flex-col justify-center items-center"
           onClick={toggleMenu}
