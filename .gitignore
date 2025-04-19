@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+.env
+.dummy.txt
 
 # next.js
 /.next/

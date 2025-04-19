@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function DrawMoney() {
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const scrollToRef = useRef(null);
 
   const plans = [
     {
@@ -35,7 +36,7 @@ export default function DrawMoney() {
         "Aylık strateji toplantısı",
       ],
       color: "bg-yellow-600",
-      accent: "border-purple-800",
+      accent: "border-yellow-700",
     },
     {
       id: 3,
@@ -53,7 +54,8 @@ export default function DrawMoney() {
         "Kişisel yatırım danışmanı",
       ],
       color: "bg-purple-700",
-      accent: "border-yellow-700",
+      accent: "border-purple-800",
+
       recommended: true,
     },
   ];
@@ -77,6 +79,21 @@ export default function DrawMoney() {
     },
   };
 
+  const handlePlanSelect = (planId) => {
+    setSelectedPlan(planId);
+    if (scrollToRef.current) {
+      scrollToRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  useEffect(() => {
+    if (selectedPlan && scrollToRef.current) {
+      setTimeout(() => {
+        scrollToRef.current.scrollIntoView({ behavior: "smooth" });
+      }, 300); // 200ms delay should be enough for rendering
+    }
+  }, [selectedPlan]);
+
   return (
     <div className="max-w-6xl mx-auto p-8">
       <motion.div
@@ -88,15 +105,15 @@ export default function DrawMoney() {
         <h1 className="text-4xl md:text-5xl font-bold mb-4">Paranızı Çekin</h1>
         <div className="w-24 h-1 bg-yellow-400 mx-auto mb-6"></div>
         <p className="text-lg max-w-2xl mx-auto">
-          Choose the payment plan that works best for you and start drawing
-          money from your coin investments. Our flexible plans are designed to
-          fit various investment strategies.
+          Size en uygun ödeme planını seçin ve coin yatırımlarınızdan para
+          çekmeye başlayın. Esnek planlarımız, çeşitli yatırım stratejilerine
+          uyacak şekilde tasarlanmıştır.
         </p>
-        <p className="text-lg max-w-2xl mx-auto font-semibold">
-          **Almak istediğiniz paketin ücretini altında bulunan kripto hesabına
+        <p className="text-lg max-w-2xl mx-auto mt-4">
+          "Almak istediğiniz paketin ücretini altında bulunan kripto hesabına
           tether usdt şeklinde etherum ağı üzerinden gönderin ve dekontunu
           Instagramdan bize iletin ( İşlem ücretini hesaba katara ödemeyi yapın
-          eksik ödemelerde iade yapılmaz)
+          eksik ödemelerde iade yapılmaz)"
         </p>
       </motion.div>
 
@@ -113,7 +130,7 @@ export default function DrawMoney() {
               selectedPlan === plan.id ? plan.accent : "border-transparent"
             } transition-all hover:bg-gray-50 hover:border-current`}
             variants={itemVariants}
-            onClick={() => setSelectedPlan(plan.id)}
+            onClick={() => handlePlanSelect(plan.id)}
           >
             <div className={`${plan.color} text-white p-6 relative`}>
               {plan.recommended && (
@@ -161,6 +178,7 @@ export default function DrawMoney() {
 
       {selectedPlan && (
         <motion.div
+          ref={scrollToRef}
           className="mt-12 p-8 bg-gray-100 rounded-lg"
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
@@ -170,15 +188,15 @@ export default function DrawMoney() {
             {plans.find((p) => p.id === selectedPlan)?.name}' ı seçtiniz.
           </h3>
           <p className="mb-4 text-gray-800">
-            İyi seçim! Lütfen ödeme bilgilerinizi tamamlayarak yatırımınızdan
-            para çekmeye başlayın.
+            İyi seçim! Aşağıdaki kripto adresi üzerinden işleminize devam
+            edebilirsiniz.
           </p>
           <motion.button
             className="bg-black text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-800 transition-colors shadow-md"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Ödeme Bilgilerini Tamamla
+            0x5dcC42Bde3395EeF8460DcDcA37E07d62270eCCe
           </motion.button>
         </motion.div>
       )}

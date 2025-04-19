@@ -7,44 +7,83 @@ export default function Home() {
   const [walletAmount, setWalletAmount] = useState(0);
 
   useEffect(() => {
+    // const FOUR_HOURS = 4 * 60 * 60 * 1000;
+    const FOUR_HOURS = 10000;
+    // const INCREMENT = 11.52;
+    const INCREMENT = 100;
+    // const INACTIVITY_LIMIT = 8 * 60 * 60 * 1000; // 8 saat
+    const INACTIVITY_LIMIT = 60000;
+    let interval = null;
+    let inactivityTimeout = null;
+
+    const setupInterval = () => {
+      if (interval) return;
+      interval = setInterval(() => {
+        setWalletAmount((prev) => {
+          const newAmount = parseFloat((prev + INCREMENT).toFixed(2));
+          localStorage.setItem("walletAmount", newAmount.toString());
+          localStorage.setItem("lastUpdateTime", Date.now().toString());
+          return newAmount;
+        });
+      }, FOUR_HOURS);
+    };
+
+    const resetInactivityTimer = () => {
+      if (inactivityTimeout) clearTimeout(inactivityTimeout);
+
+      inactivityTimeout = setTimeout(() => {
+        console.log("8 saat inaktif -> interval durduruluyor.");
+        clearInterval(interval);
+        interval = null;
+      }, INACTIVITY_LIMIT);
+    };
+
+    const handleActivity = () => {
+      resetInactivityTimer();
+      if (!interval) {
+        console.log("Kullanıcı geri döndü -> interval yeniden başlatılıyor.");
+        setupInterval();
+      }
+    };
+
+    // Girişteki localStorage kontrolü
     const storedAmount = localStorage.getItem("walletAmount");
     const lastUpdateTime = localStorage.getItem("lastUpdateTime");
     const currentTime = Date.now();
-    const FOUR_HOURS = 4 * 60 * 60 * 1000;
-    const INCREMENT = 11.52;
 
     if (storedAmount && lastUpdateTime) {
       const timeElapsed = currentTime - parseInt(lastUpdateTime);
       const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
-
-      if (intervalsElapsed > 0) {
-        const newAmount =
-          parseFloat(storedAmount) + intervalsElapsed * INCREMENT;
-        const roundedAmount = parseFloat(newAmount.toFixed(2));
-        setWalletAmount(roundedAmount);
-        localStorage.setItem("walletAmount", roundedAmount.toString());
-
-        // Son artış zamanını ayarla:
-        const newTimestamp =
-          parseInt(lastUpdateTime) + intervalsElapsed * FOUR_HOURS;
-        localStorage.setItem("lastUpdateTime", newTimestamp.toString());
-      } else {
-        setWalletAmount(parseFloat(storedAmount));
-      }
+      const newAmount = parseFloat(storedAmount) + intervalsElapsed * INCREMENT;
+      const roundedAmount = parseFloat(newAmount.toFixed(2));
+      setWalletAmount(roundedAmount);
+      localStorage.setItem("walletAmount", roundedAmount.toString());
     } else if (storedAmount) {
       setWalletAmount(parseFloat(storedAmount));
     }
 
-    const interval = setInterval(() => {
-      setWalletAmount((prev) => {
-        const newAmount = parseFloat((prev + INCREMENT).toFixed(2));
-        localStorage.setItem("walletAmount", newAmount.toString());
-        localStorage.setItem("lastUpdateTime", Date.now().toString());
-        return newAmount;
-      });
-    }, FOUR_HOURS);
+    localStorage.setItem("lastUpdateTime", currentTime.toString());
 
-    return () => clearInterval(interval);
+    // Başlat
+    setupInterval();
+    resetInactivityTimer();
+
+    // Aktivite dinleyicileri
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+    window.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        handleActivity();
+      }
+    });
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(inactivityTimeout);
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("visibilitychange", handleActivity);
+    };
   }, []);
 
   return (
