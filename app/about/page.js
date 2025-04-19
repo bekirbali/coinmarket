@@ -30,7 +30,7 @@ export default function AboutUs() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">About Us</h1>
+        <h1 className="text-4xl md:text-5xl font-bold mb-4">Hakkımızda</h1>
         <div className="w-24 h-1 bg-yellow-400 mx-auto"></div>
       </motion.div>
 
@@ -49,71 +49,89 @@ export default function AboutUs() {
             yönetimi için kesintisiz bir deneyim sunuyor.
           </p>
           <p className="text-lg leading-relaxed">
-            Btc mining , 2022 yılında kurulan ve kullanıcılarına bitcoin miningi
-            hakkında kolaylıklar sağlamayı hedefleyen bir projedir. Btc mining
-            sayesinde siz değerli kullanıcılarımızın yüz binlerce liralık mining
+            BTC Mining 2022 yılında kurulan ve kullanıcılarına bitcoin miningi
+            hakkında kolaylıklar sağlamayı hedefleyen bir projedir. BTC Mining
+            sayesinde siz değerli kullanıcılarımızın yüzbinlerce liralık mining
             setupları kurmadan sadece telefonunuz yada bilgisayarınız ile
-            dijital madencilik yapmanızı sağlayan bir mining projesidir tek
-            yapmanın gereken telefonun yada bilgisayarınız üzerinden uygulamaya
-            giriş yapmak ardından arkanıza yaslanın ve yeni neslin dijital
-            madenciliğinin tadını çıkartın.
+            dijital madencilik yapmanızı sağlayan bir mining projesidir. Tek
+            yapmanız gereken telefonunuz ya da bilgisayarınız üzerinden
+            uygulamaya giriş yapmak. Ardından arkanıza yaslanın ve yeni neslin
+            dijital madenciliğinin tadını çıkarın.
           </p>
           <p>
-            <span className="block my-2 font-semibold">NASIL ÇALIŞIR?</span> Btc
-            mining uygulaması siz değerli müşterilerimizin telefonun yada
+            <span className="block my-2 font-semibold">NASIL ÇALIŞIR?</span> BTC
+            Mining uygulaması, siz değerli müşterilerimizin telefonun ya da
             bilgisayarının işletim sistemini kullanarak bitcoin madenciliği
-            yapmanızı sağlar. Ayrıca arka planda btc mining çalışırken ağır
+            yapmanızı sağlar. Ayrıca arka planda BTC Mining çalışırken ağır
             programlar çalıştırmamaya özen gösterin bu miningin yavaşlamasına
-            neden olur. NASIL PARA ÇEKİLİR ? Kazmış olduğunuz bitcoinleri çekmek
-            istediğinizde tek yapmanın gereken para çek bölümüne gelip size
-            uygun olan paketi seçip altından kripto adresine ödemeyi göndermek
-            ödemeyi gönderdikten sonra dekontunu Instagram dm si üzerinde 7/24
-            aktif olan adminlerimize göndermek ardından çekim yapmak
-            istediğinizi belirtin ve adminlerimize iban yada bir kripto cüzdanı
-            gönderin elinizdeki bitcoinlerin dolar değeri size direkt ödeme
-            olarak yapılıcaktır
+            neden olur.
           </p>
           <p>
             <span className="block my-2 font-semibold">
               NASIL PARA ÇEKİLİR?
             </span>
-            Kazmış olduğunuz bitcoinleri çekmek istediğinizde tek yapmanın
-            gereken para çek bölümüne gelip size uygun olan paketi seçip
-            altından kripto adresine ödemeyi göndermek ödemeyi gönderdikten
-            sonra dekontunu Instagram dm si üzerinde 7/24 aktif olan
-            adminlerimize göndermek ardından çekim yapmak istediğinizi belirtin
-            ve adminlerimize iban yada bir kripto cüzdanı gönderin elinizdeki
-            bitcoinlerin dolar değeri size direkt ödeme olarak yapılıcaktır
+            Kazmış olduğunuz bitcoinleri çekmek istediğinizde tek yapmanız
+            gereken para çek bölümüne gelip size uygun olan paketi seçip, kripto
+            adresine ödemeyi göndermek ödemeyi gönderdikten sonra dekontunu
+            Instagram DM' si üzerinde 7/24 aktif olan adminlerimize göndermek,
+            ardından çekim yapmak istediğinizi belirtin ve adminlerimize iban
+            yada bir kripto cüzdanı gönderin. Elinizdeki bitcoinlerin dolar
+            değeri size direkt ödeme olarak yapılıcaktır
+          </p>
+        </motion.div>
+        <motion.div
+          className="bg-gray-800 p-8 rounded-lg shadow-md text-white border-l-4 border-red-700"
+          variants={itemVariants}
+        >
+          <h2 className="text-2xl font-bold mb-4 ">Uyarı!</h2>
+          <p className="text-lg leading-relaxed mb-6">
+            Sevgili kullanıcılarımız bitcoin mininginin sorunsuz bir şekilde
+            ilerlemesi için en az 12 saatte bir siteye giriş yapmanız
+            gerekmektedir aksi takdirde mining de duraksamalar meydana gelebilir
+            kafanızda ki tüm sorunları gidermek için Instagram üzerinde 7/24
+            aktif adminlerimize Dm üzerinden ulaşabilirsiniz
           </p>
         </motion.div>
 
         <motion.div
-          className="bg-gray-800 p-8 rounded-lg shadow-md w-1/2 mx-auto text-white"
+          className="bg-gray-800 p-8 rounded-lg shadow-lg border-l-4 border-yellow-400 text-white"
           variants={itemVariants}
         >
           <h2 className="text-2xl font-bold mb-4">İletişim Bilgileri</h2>
           <ul className="space-y-4">
             <li className="flex items-center">
-              <span className="mr-3">📍</span>
+              <span className="mr-3 text-yellow-400">📍</span>
               <span>123 Blockchain Avenue, Digital City, 10101</span>
             </li>
             <li className="flex items-center">
-              <span className="mr-3">📧</span>
+              <span className="mr-3 text-yellow-400">📧</span>
               <span>contact@coinsite.com</span>
             </li>
             <li className="flex items-center">
-              <span className="mr-3">📞</span>
+              <span className="mr-3 text-yellow-400">📞</span>
               <span>+1 (555) 123-4567</span>
             </li>
             <li className="flex items-center">
-              <span className="mr-3">⏰</span>
+              <span className="mr-3 text-yellow-400">⏰</span>
               <span>Monday - Friday, 9am - 5pm EST</span>
+            </li>
+            <li className="flex items-center">
+              <span className="mr-3 text-yellow-400">📸</span>
+              <span>
+                <a
+                  href="https://instagram.com/"
+                  target="_blank"
+                  className="text-yellow-400 hover:underline"
+                >
+                  Instagram
+                </a>
+              </span>
             </li>
           </ul>
         </motion.div>
       </motion.div>
 
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6, duration: 0.8 }}
@@ -164,7 +182,7 @@ export default function AboutUs() {
             </motion.div>
           ))}
         </div>
-      </motion.div>
+      </motion.div> */}
     </div>
   );
 }

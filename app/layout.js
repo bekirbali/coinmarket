@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
         <main className="min-h-screen">{children}</main>
         <footer className="bg-black text-white p-4 text-center">
           <div className="max-w-6xl mx-auto">
-            <p>© 2025 CoinSite. All rights reserved.</p>
+            <p>© 2025 BTC Mining. All rights reserved.</p>
           </div>
         </footer>
       </body>
