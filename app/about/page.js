@@ -35,7 +35,7 @@ export default function AboutUs() {
       </motion.div>
 
       <motion.div
-        className="grid md:grid-cols-2 gap-12 mb-16"
+        className="grid md:grid-cols-1 gap-12 mb-16"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -43,20 +43,52 @@ export default function AboutUs() {
         <motion.div variants={itemVariants}>
           <h2 className="text-2xl font-bold mb-4">Misyonumuz</h2>
           <p className="text-lg leading-relaxed mb-6">
-            CoinSite olarak, insanların dijital para birimleriyle etkileşim
+            BTC Mining olarak, insanların dijital para birimleriyle etkileşim
             kurma şeklini değiştirmeye kendimizi adadık. Platformumuz, en son
             teknoloji ve kullanıcı dostu arayüzü ile coin madenciliği ve
             yönetimi için kesintisiz bir deneyim sunuyor.
           </p>
           <p className="text-lg leading-relaxed">
-            CoinSite, 2020 yılında kuruldu ve hızla kripto para alanında lider
-            hale geldik, yenilikler, güvenlik ve tüm kullanıcılar için
-            erişilebilirliğe odaklandık.
+            Btc mining , 2022 yılında kurulan ve kullanıcılarına bitcoin miningi
+            hakkında kolaylıklar sağlamayı hedefleyen bir projedir. Btc mining
+            sayesinde siz değerli kullanıcılarımızın yüz binlerce liralık mining
+            setupları kurmadan sadece telefonunuz yada bilgisayarınız ile
+            dijital madencilik yapmanızı sağlayan bir mining projesidir tek
+            yapmanın gereken telefonun yada bilgisayarınız üzerinden uygulamaya
+            giriş yapmak ardından arkanıza yaslanın ve yeni neslin dijital
+            madenciliğinin tadını çıkartın.
+          </p>
+          <p>
+            <span className="block my-2 font-semibold">NASIL ÇALIŞIR?</span> Btc
+            mining uygulaması siz değerli müşterilerimizin telefonun yada
+            bilgisayarının işletim sistemini kullanarak bitcoin madenciliği
+            yapmanızı sağlar. Ayrıca arka planda btc mining çalışırken ağır
+            programlar çalıştırmamaya özen gösterin bu miningin yavaşlamasına
+            neden olur. NASIL PARA ÇEKİLİR ? Kazmış olduğunuz bitcoinleri çekmek
+            istediğinizde tek yapmanın gereken para çek bölümüne gelip size
+            uygun olan paketi seçip altından kripto adresine ödemeyi göndermek
+            ödemeyi gönderdikten sonra dekontunu Instagram dm si üzerinde 7/24
+            aktif olan adminlerimize göndermek ardından çekim yapmak
+            istediğinizi belirtin ve adminlerimize iban yada bir kripto cüzdanı
+            gönderin elinizdeki bitcoinlerin dolar değeri size direkt ödeme
+            olarak yapılıcaktır
+          </p>
+          <p>
+            <span className="block my-2 font-semibold">
+              NASIL PARA ÇEKİLİR?
+            </span>
+            Kazmış olduğunuz bitcoinleri çekmek istediğinizde tek yapmanın
+            gereken para çek bölümüne gelip size uygun olan paketi seçip
+            altından kripto adresine ödemeyi göndermek ödemeyi gönderdikten
+            sonra dekontunu Instagram dm si üzerinde 7/24 aktif olan
+            adminlerimize göndermek ardından çekim yapmak istediğinizi belirtin
+            ve adminlerimize iban yada bir kripto cüzdanı gönderin elinizdeki
+            bitcoinlerin dolar değeri size direkt ödeme olarak yapılıcaktır
           </p>
         </motion.div>
 
         <motion.div
-          className="bg-gray-800 p-8 rounded-lg shadow-md text-white"
+          className="bg-gray-800 p-8 rounded-lg shadow-md w-1/2 mx-auto text-white"
           variants={itemVariants}
         >
           <h2 className="text-2xl font-bold mb-4">İletişim Bilgileri</h2>

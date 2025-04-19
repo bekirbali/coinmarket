@@ -12,9 +12,9 @@ export default function DrawMoney() {
       name: "3 aylık plan",
       description:
         "Kısa vadeli yatırım için uygundur. Başlangıç seviyesi için mükemmel.",
-      price: "$299",
+      price: "$55",
       features: [
-        "Haftalık çekimler",
+        "Aylık çekimler",
         "Temel müşteri desteği",
         "Başlangıç seviyesi coinlere erişim",
         "Mobil uygulama erişimi",
@@ -26,24 +26,23 @@ export default function DrawMoney() {
       id: 2,
       name: "6 aylık plan",
       description: "En popüler seçenek, dengeli avantajlar ve sürekliliği ile.",
-      price: "$499",
+      price: "$60",
       features: [
-        "Haftalık çekimler",
+        "Aylık çekimler",
         "Öncelikli müşteri desteği",
         "Tüm coinlere erişim",
         "Mobil uygulama erişimi",
         "Aylık strateji toplantısı",
       ],
-      color: "bg-purple-700",
+      color: "bg-yellow-600",
       accent: "border-purple-800",
-      recommended: true,
     },
     {
       id: 3,
       name: "1 yıllık plan",
       description:
         "En yüksek getiriler için premium uzun vadeli yatırım seçeneği.",
-      price: "$899",
+      price: "$65",
       features: [
         "Günlük çekimler",
         "24/7 VIP müşteri desteği",
@@ -53,8 +52,9 @@ export default function DrawMoney() {
         "Yeni özelliklere erken erişim",
         "Kişisel yatırım danışmanı",
       ],
-      color: "bg-yellow-600",
+      color: "bg-purple-700",
       accent: "border-yellow-700",
+      recommended: true,
     },
   ];
 
@@ -85,12 +85,18 @@ export default function DrawMoney() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">Draw Your Money</h1>
+        <h1 className="text-4xl md:text-5xl font-bold mb-4">Paranızı Çekin</h1>
         <div className="w-24 h-1 bg-yellow-400 mx-auto mb-6"></div>
         <p className="text-lg max-w-2xl mx-auto">
           Choose the payment plan that works best for you and start drawing
           money from your coin investments. Our flexible plans are designed to
           fit various investment strategies.
+        </p>
+        <p className="text-lg max-w-2xl mx-auto font-semibold">
+          **Almak istediğiniz paketin ücretini altında bulunan kripto hesabına
+          tether usdt şeklinde etherum ağı üzerinden gönderin ve dekontunu
+          Instagramdan bize iletin ( İşlem ücretini hesaba katara ödemeyi yapın
+          eksik ödemelerde iade yapılmaz)
         </p>
       </motion.div>
 
