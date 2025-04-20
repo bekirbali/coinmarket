@@ -67,8 +67,12 @@ export default function Navbar() {
       </nav>
 
       {/* Mobile Navigation Menu */}
-      <div className={`md:hidden ${isMenuOpen ? "block" : "hidden"} mt-4`}>
-        <ul className="flex flex-col gap-4">
+      <div
+        className={`md:hidden ${
+          isMenuOpen ? "block" : "hidden"
+        } mt-4 w-1/2 ml-auto rounded-xl bg-black shadow-lg absolute right-4 top-16 z-50`}
+      >
+        <ul className="flex flex-col gap-4 p-4">
           <li>
             <Link
               href="/"
