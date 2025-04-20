@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 
 export default function Home() {
   const [walletAmount, setWalletAmount] = useState(0);
+  const [isMining, setIsMining] = useState(false);
 
   useEffect(() => {
     // const FOUR_HOURS = 4 * 60 * 60 * 1000;
@@ -40,7 +41,7 @@ export default function Home() {
 
     const handleActivity = () => {
       resetInactivityTimer();
-      if (!interval) {
+      if (!interval && isMining) {
         console.log("Kullanıcı geri döndü -> interval yeniden başlatılıyor.");
         setupInterval();
       }
@@ -51,7 +52,7 @@ export default function Home() {
     const lastUpdateTime = localStorage.getItem("lastUpdateTime");
     const currentTime = Date.now();
 
-    if (storedAmount && lastUpdateTime) {
+    if (storedAmount && lastUpdateTime && isMining) {
       const timeElapsed = currentTime - parseInt(lastUpdateTime);
       const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
       const newAmount = parseFloat(storedAmount) + intervalsElapsed * INCREMENT;
@@ -62,11 +63,13 @@ export default function Home() {
       setWalletAmount(parseFloat(storedAmount));
     }
 
-    localStorage.setItem("lastUpdateTime", currentTime.toString());
+    if (isMining) {
+      localStorage.setItem("lastUpdateTime", currentTime.toString());
 
-    // Başlat
-    setupInterval();
-    resetInactivityTimer();
+      // Başlat
+      setupInterval();
+      resetInactivityTimer();
+    }
 
     // Aktivite dinleyicileri
     window.addEventListener("mousemove", handleActivity);
@@ -84,7 +87,11 @@ export default function Home() {
       window.removeEventListener("keydown", handleActivity);
       window.removeEventListener("visibilitychange", handleActivity);
     };
-  }, []);
+  }, [isMining]);
+
+  const startMining = () => {
+    setIsMining(true);
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-8">
@@ -96,7 +103,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            Welcome to the Future of Digital Currency
+            Dijital Para Biriminin Geleceğine Hoş Geldiniz
           </motion.h1>
           <motion.p
             className="text-lg mb-8"
@@ -104,7 +111,8 @@ export default function Home() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.5 }}
           >
-            Start mining and earning coins today with our innovative platform.
+            Yenilikçi platformumuzla bugün mining yapmaya ve coin kazanmaya
+            başlayın.
           </motion.p>
           <motion.div
             className="bg-black text-white p-6 rounded-lg shadow-md mb-8"
@@ -112,7 +120,7 @@ export default function Home() {
             animate={{ scale: 1 }}
             transition={{ delay: 0.6, duration: 0.3 }}
           >
-            <h2 className="text-2xl font-semibold mb-2">Your Wallet</h2>
+            <h2 className="text-2xl font-semibold mb-2">Bakiyeniz</h2>
             <motion.p
               className="text-3xl font-bold text-yellow-400"
               animate={{ scale: [1, 1.1, 1] }}
@@ -129,8 +137,9 @@ export default function Home() {
             className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-6 rounded-full text-lg transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={startMining}
           >
-            Start Mining Now
+            Mining Yapmaya Başla
           </motion.button>
         </div>
         <div className="md:w-1/2 flex justify-center">

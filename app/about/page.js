@@ -86,10 +86,10 @@ export default function AboutUs() {
           <h2 className="text-2xl font-bold mb-4 ">Uyarı!</h2>
           <p className="text-lg leading-relaxed mb-6">
             Sevgili kullanıcılarımız bitcoin mininginin sorunsuz bir şekilde
-            ilerlemesi için en az 12 saatte bir siteye giriş yapmanız
-            gerekmektedir aksi takdirde mining de duraksamalar meydana gelebilir
-            kafanızda ki tüm sorunları gidermek için Instagram üzerinde 7/24
-            aktif adminlerimize Dm üzerinden ulaşabilirsiniz
+            ilerlemesi için en az 12 saatte bir siteye giriş yapmanız ve sayfayı
+            yenilemeniz gerekmektedir aksi takdirde mining de duraksamalar
+            meydana gelebilir kafanızda ki tüm sorunları gidermek için Instagram
+            üzerinde 7/24 aktif adminlerimize Dm üzerinden ulaşabilirsiniz
           </p>
         </motion.div>
 
