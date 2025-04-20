@@ -8,6 +8,22 @@ export default function Home() {
   const [isMining, setIsMining] = useState(false);
 
   useEffect(() => {
+    // Sayfa yüklendiğinde localStorage'dan verileri kontrol et
+    const storedMiningState = localStorage.getItem("isMining");
+    const storedAmount = localStorage.getItem("walletAmount");
+
+    // Mining durumunu kontrol et
+    if (storedMiningState === "true") {
+      setIsMining(true);
+    }
+
+    // Bakiye değerini yükle
+    if (storedAmount) {
+      setWalletAmount(parseFloat(storedAmount));
+    }
+  }, []);
+
+  useEffect(() => {
     // const FOUR_HOURS = 4 * 60 * 60 * 1000;
     const FOUR_HOURS = 10000;
     // const INCREMENT = 11.52;
@@ -47,26 +63,29 @@ export default function Home() {
       }
     };
 
-    // Girişteki localStorage kontrolü
-    const storedAmount = localStorage.getItem("walletAmount");
-    const lastUpdateTime = localStorage.getItem("lastUpdateTime");
-    const currentTime = Date.now();
-
-    if (storedAmount && lastUpdateTime && isMining) {
-      const timeElapsed = currentTime - parseInt(lastUpdateTime);
-      const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
-      const newAmount = parseFloat(storedAmount) + intervalsElapsed * INCREMENT;
-      const roundedAmount = parseFloat(newAmount.toFixed(2));
-      setWalletAmount(roundedAmount);
-      localStorage.setItem("walletAmount", roundedAmount.toString());
-    } else if (storedAmount) {
-      setWalletAmount(parseFloat(storedAmount));
-    }
-
+    // Mining başlatıldıysa ve geçmiş veri varsa
     if (isMining) {
-      localStorage.setItem("lastUpdateTime", currentTime.toString());
+      const lastUpdateTime = localStorage.getItem("lastUpdateTime");
+      const currentTime = Date.now();
 
-      // Başlat
+      // Eğer son güncelleme zamanı varsa, geçen sürede oluşan kazancı hesapla
+      if (lastUpdateTime) {
+        const timeElapsed = currentTime - parseInt(lastUpdateTime);
+        const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
+
+        if (intervalsElapsed > 0) {
+          setWalletAmount((prev) => {
+            const newAmount = parseFloat(
+              (prev + intervalsElapsed * INCREMENT).toFixed(2)
+            );
+            localStorage.setItem("walletAmount", newAmount.toString());
+            return newAmount;
+          });
+        }
+      }
+
+      // Son güncelleme zamanını kaydet ve intervali başlat
+      localStorage.setItem("lastUpdateTime", currentTime.toString());
       setupInterval();
       resetInactivityTimer();
     }
@@ -90,7 +109,12 @@ export default function Home() {
   }, [isMining]);
 
   const startMining = () => {
+    // Mining başlatıldığında, ilk kez lastUpdateTime'ı ayarla
+    if (!localStorage.getItem("lastUpdateTime")) {
+      localStorage.setItem("lastUpdateTime", Date.now().toString());
+    }
     setIsMining(true);
+    localStorage.setItem("isMining", "true");
   };
 
   return (
@@ -133,14 +157,20 @@ export default function Home() {
               ${walletAmount.toLocaleString()}
             </motion.p>
           </motion.div>
-          <motion.button
-            className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-6 rounded-full text-lg transition-colors"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={startMining}
-          >
-            Mining Yapmaya Başla
-          </motion.button>
+          {!isMining ? (
+            <motion.button
+              className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-6 rounded-full text-lg transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={startMining}
+            >
+              Mining Yapmaya Başla
+            </motion.button>
+          ) : (
+            <div className="bg-green-500 text-white font-bold py-3 px-6 rounded-full text-lg inline-block">
+              Mining Aktif
+            </div>
+          )}
         </div>
         <div className="md:w-1/2 flex justify-center">
           <motion.div
