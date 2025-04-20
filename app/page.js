@@ -6,15 +6,22 @@ import { motion } from "framer-motion";
 export default function Home() {
   const [walletAmount, setWalletAmount] = useState(0);
   const [isMining, setIsMining] = useState(false);
+  const [isMiningPaused, setIsMiningPaused] = useState(false);
 
   useEffect(() => {
     // Sayfa yüklendiğinde localStorage'dan verileri kontrol et
     const storedMiningState = localStorage.getItem("isMining");
     const storedAmount = localStorage.getItem("walletAmount");
+    const storedPausedState = localStorage.getItem("isMiningPaused");
 
     // Mining durumunu kontrol et
     if (storedMiningState === "true") {
       setIsMining(true);
+    }
+
+    // Mining duraklatma durumunu kontrol et
+    if (storedPausedState === "true") {
+      setIsMiningPaused(true);
     }
 
     // Bakiye değerini yükle
@@ -52,6 +59,8 @@ export default function Home() {
         console.log("8 saat inaktif -> interval durduruluyor.");
         clearInterval(interval);
         interval = null;
+        setIsMiningPaused(true);
+        localStorage.setItem("isMiningPaused", "true");
       }, INACTIVITY_LIMIT);
     };
 
@@ -60,6 +69,8 @@ export default function Home() {
       if (!interval && isMining) {
         console.log("Kullanıcı geri döndü -> interval yeniden başlatılıyor.");
         setupInterval();
+        setIsMiningPaused(false);
+        localStorage.setItem("isMiningPaused", "false");
       }
     };
 
@@ -88,6 +99,8 @@ export default function Home() {
       localStorage.setItem("lastUpdateTime", currentTime.toString());
       setupInterval();
       resetInactivityTimer();
+      setIsMiningPaused(false);
+      localStorage.setItem("isMiningPaused", "false");
     }
 
     // Aktivite dinleyicileri
@@ -114,7 +127,9 @@ export default function Home() {
       localStorage.setItem("lastUpdateTime", Date.now().toString());
     }
     setIsMining(true);
+    setIsMiningPaused(false);
     localStorage.setItem("isMining", "true");
+    localStorage.setItem("isMiningPaused", "false");
   };
 
   return (
@@ -166,6 +181,10 @@ export default function Home() {
             >
               Mining Yapmaya Başla
             </motion.button>
+          ) : isMiningPaused ? (
+            <div className="bg-red-500 text-white font-bold py-3 px-6 rounded-full text-lg inline-block">
+              Mining Duraklatıldı
+            </div>
           ) : (
             <div className="bg-green-500 text-white font-bold py-3 px-6 rounded-full text-lg inline-block">
               Mining Aktif
