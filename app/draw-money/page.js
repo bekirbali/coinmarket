@@ -2,10 +2,13 @@
 
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function DrawMoney() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const scrollToRef = useRef(null);
+  const [copied, setCopied] = useState(false);
 
   const plans = [
     {
@@ -17,8 +20,7 @@ export default function DrawMoney() {
       features: [
         "Aylık çekimler",
         "Temel müşteri desteği",
-        "Başlangıç seviyesi coinlere erişim",
-        "Mobil uygulama erişimi",
+        "Websitesi erişimi",
       ],
       color: "bg-blue-600",
       accent: "border-blue-700",
@@ -31,8 +33,7 @@ export default function DrawMoney() {
       features: [
         "Aylık çekimler",
         "Öncelikli müşteri desteği",
-        "Tüm coinlere erişim",
-        "Mobil uygulama erişimi",
+        "Websitesi erişimi",
         "Aylık strateji toplantısı",
       ],
       color: "bg-yellow-600",
@@ -46,7 +47,7 @@ export default function DrawMoney() {
       price: "$65",
       features: [
         "Günlük çekimler",
-        "24/7 VIP müşteri desteği",
+        "7/24 VIP müşteri desteği",
         "Özel coinlere erişim",
         "Mobil uygulama erişimi",
         "Haftalık strateji toplantıları",
@@ -86,6 +87,30 @@ export default function DrawMoney() {
     }
   };
 
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(
+      () => {
+        setCopied(true);
+        toast.success("Kripto adresi kopyalandı!", {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+        setTimeout(() => setCopied(false), 2000);
+      },
+      (err) => {
+        console.error("Could not copy text: ", err);
+        toast.error("Kopyalama başarısız oldu!", {
+          position: "top-right",
+          autoClose: 2000,
+        });
+      }
+    );
+  };
+
   useEffect(() => {
     if (selectedPlan && scrollToRef.current) {
       setTimeout(() => {
@@ -96,6 +121,7 @@ export default function DrawMoney() {
 
   return (
     <div className="max-w-6xl mx-auto p-8">
+      <ToastContainer />
       <motion.div
         className="text-center mb-12"
         initial={{ opacity: 0, y: -20 }}
@@ -109,12 +135,17 @@ export default function DrawMoney() {
           çekmeye başlayın. Esnek planlarımız, çeşitli yatırım stratejilerine
           uyacak şekilde tasarlanmıştır.
         </p>
-        <p className="text-lg max-w-2xl mx-auto mt-4">
-          "Almak istediğiniz paketin ücretini altında bulunan kripto hesabına
-          tether usdt şeklinde etherum ağı üzerinden gönderin ve dekontunu
-          Instagramdan bize iletin ( İşlem ücretini hesaba katara ödemeyi yapın
-          eksik ödemelerde iade yapılmaz)"
-        </p>
+        <motion.div
+          className="bg-gray-800 p-8 rounded-lg shadow-md text-white border-l-4 border-red-700"
+          variants={itemVariants}
+        >
+          <p className="text-lg max-w-2xl mx-auto mt-4">
+            "Almak istediğiniz paketin ücretini altında bulunan kripto hesabına
+            tether usdt şeklinde etherum ağı üzerinden gönderin ve dekontunu
+            Instagramdan bize iletin ( İşlem ücretini hesaba katarak ödemeyi
+            yapın, eksik ödemelerde iade yapılmaz)"
+          </p>
+        </motion.div>
       </motion.div>
 
       <motion.div
@@ -188,15 +219,53 @@ export default function DrawMoney() {
             {plans.find((p) => p.id === selectedPlan)?.name}' ı seçtiniz.
           </h3>
           <p className="mb-4 text-gray-800">
-            İyi seçim! Aşağıdaki kripto adresi üzerinden işleminize devam
-            edebilirsiniz.
+            İyi seçim! Aşağıdaki kripto adresi üzerinden ödemeyi
+            sağlayabilirsiniz.
           </p>
           <motion.button
-            className="bg-black text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-800 transition-colors shadow-md"
+            className="bg-black text-white font-bold py-3 px-4 sm:px-6 rounded-lg hover:bg-gray-800 transition-colors shadow-md inline-flex items-center text-sm sm:text-base break-all max-w-full"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() =>
+              copyToClipboard("0x5dcC42Bde3395EeF8460DcDcA37E07d62270eCCe")
+            }
           >
-            0x5dcC42Bde3395EeF8460DcDcA37E07d62270eCCe
+            <span className="mr-2">
+              0x5dcC42Bde3395EeF8460DcDcA37E07d62270eCCe
+            </span>
+            <span className="flex-shrink-0 ml-1">
+              {copied ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                  />
+                </svg>
+              )}
+            </span>
           </motion.button>
         </motion.div>
       )}
