@@ -101,25 +101,27 @@ export default function AboutUs() {
           <ul className="space-y-4">
             <li className="flex items-center">
               <span className="mr-3 text-yellow-400">📍</span>
-              <span>123 Blockchain Avenue, Digital City, 10101</span>
+              <span>143 Blockchain Avenue, Digital City, 10182</span>
             </li>
             <li className="flex items-center">
               <span className="mr-3 text-yellow-400">📧</span>
-              <span>contact@coinsite.com</span>
+              <span>btc.mining@gmail.com</span>
             </li>
             <li className="flex items-center">
               <span className="mr-3 text-yellow-400">📞</span>
-              <span>+1 (555) 123-4567</span>
+              <span>+44 020 8032 0456</span>
             </li>
             <li className="flex items-center">
               <span className="mr-3 text-yellow-400">⏰</span>
               <span>Monday - Friday, 9am - 5pm EST</span>
             </li>
             <li className="flex items-center">
-              <span className="mr-3 text-yellow-400">📸</span>
+              <span className="mr-3">
+                <img src="/instaicon.png" alt="Instagram" className="w-5 h-5" />
+              </span>
               <span>
                 <a
-                  href="https://instagram.com/"
+                  href="https://www.instagram.com/bitcoin.miningtr?igsh=ZzA2cjMza3k2OG0x"
                   target="_blank"
                   className="text-yellow-400 hover:underline"
                 >
