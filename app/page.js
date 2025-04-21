@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import InAppBrowserWarning from "./components/InAppBrowserWarning";
 
 export default function Home() {
   const [walletAmount, setWalletAmount] = useState(0);
@@ -134,6 +135,7 @@ export default function Home() {
 
   return (
     <div className="max-w-6xl mx-auto p-8">
+      <InAppBrowserWarning />
       <div className="flex flex-col md:flex-row items-center justify-between gap-12">
         <div className="md:w-1/2">
           <motion.h1
