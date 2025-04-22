@@ -168,6 +168,11 @@ export default function Home() {
     localStorage.setItem("isMiningPaused", "false");
   };
 
+  const resetBalance = () => {
+    setWalletAmount(0);
+    localStorage.setItem("walletAmount", "0");
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-8">
       <InAppBrowserWarning />
@@ -228,6 +233,14 @@ export default function Home() {
               Mining Aktif
             </div>
           )}
+          <motion.button
+            className="bg-red-400 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-full text-lg transition-colors ml-4"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={resetBalance}
+          >
+            Bakiyeyi Sıfırla
+          </motion.button>
         </div>
         <div className="md:w-1/2 flex justify-center">
           <motion.div
