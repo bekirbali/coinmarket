@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import InAppBrowserWarning from "./components/InAppBrowserWarning";
 import MobileOptimizationInfo from "./components/MobileOptimizationInfo";
@@ -15,6 +15,10 @@ export default function Home() {
     currentTime: "Yok",
     timeLeft: "Yok",
   });
+
+  const intervalRef = useRef(null);
+  const debugIntervalRef = useRef(null);
+  const inactivityTimeoutRef = useRef(null);
 
   useEffect(() => {
     // Sayfa yüklendiğinde localStorage'dan verileri kontrol et
@@ -46,9 +50,6 @@ export default function Home() {
     // const INCREMENT = 100;
     const INACTIVITY_LIMIT = 12 * 60 * 60 * 1000; // 12 saat
     // const INACTIVITY_LIMIT = 60000;
-    let interval = null;
-    let inactivityTimeout = null;
-    let debugInterval = null;
 
     const updateWalletBasedOnElapsedTime = () => {
       const lastUpdateTime = localStorage.getItem("lastUpdateTime");
@@ -97,10 +98,10 @@ export default function Home() {
     };
 
     const setupInterval = () => {
-      if (interval) clearInterval(interval);
+      if (intervalRef.current) clearInterval(intervalRef.current);
 
       // interval'ı ayarla
-      interval = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         setWalletAmount((prev) => {
           const newAmount = parseFloat((prev + INCREMENT).toFixed(2));
           const currentTime = Date.now();
@@ -123,12 +124,13 @@ export default function Home() {
     };
 
     const resetInactivityTimer = () => {
-      if (inactivityTimeout) clearTimeout(inactivityTimeout);
+      if (inactivityTimeoutRef.current)
+        clearTimeout(inactivityTimeoutRef.current);
 
-      inactivityTimeout = setTimeout(() => {
+      inactivityTimeoutRef.current = setTimeout(() => {
         console.log("8 saat inaktif -> interval durduruluyor.");
-        clearInterval(interval);
-        interval = null;
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
         setIsMiningPaused(true);
         localStorage.setItem("isMiningPaused", "true");
       }, INACTIVITY_LIMIT);
@@ -140,7 +142,7 @@ export default function Home() {
         // Her aktivitede önce geçen zamanı kontrol et ve bakiyeyi güncelle
         const updated = updateWalletBasedOnElapsedTime();
 
-        if (!interval) {
+        if (!intervalRef.current) {
           console.log("Kullanıcı geri döndü -> interval yeniden başlatılıyor.");
           setupInterval();
           setIsMiningPaused(false);
@@ -151,9 +153,9 @@ export default function Home() {
 
     // Debug bilgilerini sürekli güncelle
     const setupDebugInterval = () => {
-      if (debugInterval) clearInterval(debugInterval);
+      if (debugIntervalRef.current) clearInterval(debugIntervalRef.current);
 
-      debugInterval = setInterval(() => {
+      debugIntervalRef.current = setInterval(() => {
         const lastUpdateTime = localStorage.getItem("lastUpdateTime");
         if (lastUpdateTime && isMining && !isMiningPaused) {
           const currentTime = Date.now();
@@ -187,6 +189,26 @@ export default function Home() {
       resetInactivityTimer();
       setIsMiningPaused(false);
       localStorage.setItem("isMiningPaused", "false");
+
+      // İlk yükleme debug bilgisi
+      const lastUpdateTime = localStorage.getItem("lastUpdateTime");
+      if (lastUpdateTime) {
+        const currentTime = Date.now();
+        const timeElapsed = currentTime - parseInt(lastUpdateTime);
+
+        setDebugInfo((prev) => ({
+          ...prev,
+          lastUpdateTime: new Date(
+            parseInt(lastUpdateTime)
+          ).toLocaleTimeString(),
+          currentTime: new Date(currentTime).toLocaleTimeString(),
+          timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
+          debugMessage:
+            timeElapsed > 300000
+              ? "Uzun süredir kapalıydı - kontrol edildi"
+              : "Sayfa açıldı",
+        }));
+      }
     }
 
     // Gereksiz çift kontrolleri engellemek için throttle mekanizması
@@ -209,16 +231,56 @@ export default function Home() {
     window.addEventListener("scroll", throttledHandleActivity);
     window.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
+        // Sayfa görünür olduğunda geçen zamanı tam olarak hesapla
+        const lastUpdateTime = localStorage.getItem("lastUpdateTime");
+        if (lastUpdateTime && isMining) {
+          const currentTime = Date.now();
+          const timeElapsed = currentTime - parseInt(lastUpdateTime);
+
+          // Debug bilgisini güncelle
+          setDebugInfo((prev) => ({
+            ...prev,
+            lastUpdateTime: new Date(
+              parseInt(lastUpdateTime)
+            ).toLocaleTimeString(),
+            currentTime: new Date(currentTime).toLocaleTimeString(),
+            timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
+            debugMessage: "Sayfa görünür oldu - geçen süre kontrol ediliyor",
+          }));
+
+          // Zamanı kontrol et ve bakiyeyi güncelle
+          updateWalletBasedOnElapsedTime();
+
+          // Interval durmuşsa yeniden başlat
+          if (!intervalRef.current && !isMiningPaused) {
+            setupInterval();
+          }
+        }
+
         handleActivity();
+      } else {
+        // Sayfa gizlendiğinde son zamanı KAYDETMİYORUZ! Sadece debug mesajını güncelle
+        if (isMining) {
+          setDebugInfo((prev) => ({
+            ...prev,
+            debugMessage:
+              "Sayfa arka plana alındı - son güncelleme zamanı korunuyor",
+          }));
+        }
       }
     });
 
     // App focus/blur olayları için
     window.addEventListener("focus", handleActivity);
     window.addEventListener("blur", () => {
-      // Sayfa blur olduğunda son zamanı kaydet
+      // Sayfa blur olduğunda son zamanı KAYDETME
       if (isMining) {
-        localStorage.setItem("lastUpdateTime", Date.now().toString());
+        // localStorage.setItem("lastUpdateTime", Date.now().toString()); - BU SATIRI KALDIRDIK
+        setDebugInfo((prev) => ({
+          ...prev,
+          debugMessage:
+            "Sayfa odağını kaybetti - son güncelleme zamanı korunuyor",
+        }));
       }
     });
 
@@ -230,24 +292,65 @@ export default function Home() {
     }, 300000); // 5 dakikada bir kontrol et (eskiden 1 dakika)
 
     return () => {
-      clearInterval(interval);
+      clearInterval(intervalRef.current);
       clearInterval(checkTimer);
-      clearInterval(debugInterval);
-      clearTimeout(inactivityTimeout);
+      clearInterval(debugIntervalRef.current);
+      clearTimeout(inactivityTimeoutRef.current);
       window.removeEventListener("mousemove", throttledHandleActivity);
       window.removeEventListener("keydown", throttledHandleActivity);
       window.removeEventListener("touchstart", throttledHandleActivity);
       window.removeEventListener("touchmove", throttledHandleActivity);
       window.removeEventListener("scroll", throttledHandleActivity);
-      window.removeEventListener("visibilitychange", handleActivity);
+      window.removeEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          // Sayfa görünür olduğunda geçen zamanı tam olarak hesapla
+          const lastUpdateTime = localStorage.getItem("lastUpdateTime");
+          if (lastUpdateTime && isMining) {
+            const currentTime = Date.now();
+            const timeElapsed = currentTime - parseInt(lastUpdateTime);
+
+            // Debug bilgisini güncelle
+            setDebugInfo((prev) => ({
+              ...prev,
+              lastUpdateTime: new Date(
+                parseInt(lastUpdateTime)
+              ).toLocaleTimeString(),
+              currentTime: new Date(currentTime).toLocaleTimeString(),
+              timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
+              debugMessage: "Sayfa görünür oldu - geçen süre kontrol ediliyor",
+            }));
+
+            // Zamanı kontrol et ve bakiyeyi güncelle
+            updateWalletBasedOnElapsedTime();
+
+            // Interval durmuşsa yeniden başlat
+            if (!intervalRef.current && !isMiningPaused) {
+              setupInterval();
+            }
+          }
+
+          handleActivity();
+        } else {
+          // Sayfa gizlendiğinde son zamanı KAYDETMİYORUZ! Sadece debug mesajını güncelle
+          if (isMining) {
+            setDebugInfo((prev) => ({
+              ...prev,
+              debugMessage:
+                "Sayfa arka plana alındı - son güncelleme zamanı korunuyor",
+            }));
+          }
+        }
+      });
       window.removeEventListener("focus", handleActivity);
       window.removeEventListener("blur", handleActivity);
     };
   }, [isMining]);
 
   const startMining = () => {
-    // Mining başlatıldığında, ilk kez lastUpdateTime'ı ayarla
-    localStorage.setItem("lastUpdateTime", Date.now().toString());
+    // Mining başlatıldığında, lastUpdateTime'ı kontrol et ve yoksa ayarla
+    if (!localStorage.getItem("lastUpdateTime")) {
+      localStorage.setItem("lastUpdateTime", Date.now().toString());
+    }
     setIsMining(true);
     setIsMiningPaused(false);
     localStorage.setItem("isMining", "true");
@@ -340,35 +443,55 @@ export default function Home() {
 
           {/* Debug Panel */}
           {isMining && (
-            <div className="mt-6 bg-gray-100 p-4 rounded-lg text-sm border border-gray-300">
-              <h3 className="font-bold mb-2">Debug Bilgileri:</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <div>Son güncelleme:</div>
-                <div>{debugInfo.lastUpdateTime}</div>
+            <div className="mt-6 bg-gray-800 p-5 rounded-lg text-sm border border-gray-700 shadow-lg">
+              <h3 className="font-bold mb-3 text-lg text-yellow-400">
+                Debug Bilgileri
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-gray-400 font-medium">Son güncelleme:</div>
+                <div className="text-white font-semibold">
+                  {debugInfo.lastUpdateTime}
+                </div>
 
-                <div>Sonraki güncelleme:</div>
-                <div>{debugInfo.nextUpdateTime}</div>
+                <div className="text-gray-400 font-medium">
+                  Sonraki güncelleme:
+                </div>
+                <div className="text-white font-semibold">
+                  {debugInfo.nextUpdateTime}
+                </div>
 
-                <div>Şu anki zaman:</div>
-                <div>{debugInfo.currentTime}</div>
+                <div className="text-gray-400 font-medium">Şu anki zaman:</div>
+                <div className="text-white font-semibold">
+                  {debugInfo.currentTime}
+                </div>
 
-                <div>Kalan süre:</div>
-                <div>{debugInfo.timeLeft}</div>
+                <div className="text-gray-400 font-medium">Kalan süre:</div>
+                <div className="text-white font-semibold">
+                  {debugInfo.timeLeft}
+                </div>
 
                 {debugInfo.timeElapsed && (
                   <>
-                    <div>Geçen süre:</div>
-                    <div>{debugInfo.timeElapsed}</div>
+                    <div className="text-gray-400 font-medium">Geçen süre:</div>
+                    <div className="text-white font-semibold">
+                      {debugInfo.timeElapsed}
+                    </div>
 
-                    <div>Geçen periyot sayısı:</div>
-                    <div>{debugInfo.intervalsElapsed}</div>
+                    <div className="text-gray-400 font-medium">
+                      Geçen periyot sayısı:
+                    </div>
+                    <div className="text-white font-semibold">
+                      {debugInfo.intervalsElapsed}
+                    </div>
                   </>
                 )}
 
                 {debugInfo.debugMessage && (
                   <>
-                    <div>Durum:</div>
-                    <div>{debugInfo.debugMessage}</div>
+                    <div className="text-gray-400 font-medium">Durum:</div>
+                    <div className="text-green-400 font-semibold">
+                      {debugInfo.debugMessage}
+                    </div>
                   </>
                 )}
               </div>
