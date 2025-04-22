@@ -255,7 +255,7 @@ export default function Home() {
           // Bakiyeyi güncelle
           await updateDoc(minerRef, {
             balance: data.balance + additionalBalance,
-            lastUpdateTime: currentTime,
+            lastUpdateTime: lastUpdateTime + intervalsElapsed * FOUR_HOURS,
             lastActive: currentTime,
           });
 
@@ -323,7 +323,7 @@ export default function Home() {
 
         await updateDoc(minerRef, {
           balance: data.balance + additionalBalance,
-          lastUpdateTime: currentTime,
+          lastUpdateTime: lastUpdateTime + intervalsElapsed * FOUR_HOURS,
           lastActive: currentTime,
         });
 

@@ -79,7 +79,7 @@ exports.updateMinerBalances = functions
             .doc(doc.id)
             .update({
               balance: admin.firestore.FieldValue.increment(totalIncrement),
-              lastUpdateTime: now,
+              lastUpdateTime: lastUpdateTime + periodsElapsed * FOUR_HOURS,
             })
         );
       } else {
