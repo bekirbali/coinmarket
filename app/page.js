@@ -34,7 +34,7 @@ export default function Home() {
 
   useEffect(() => {
     // const FOUR_HOURS = 4 * 60 * 60 * 1000;
-    const FOUR_HOURS = 1 * 60 * 60 * 1000;
+    const FOUR_HOURS = 1 * 30 * 60 * 1000;
     // const FOUR_HOURS = 10000;
     const INCREMENT = 11.52;
     // const INCREMENT = 100;
@@ -60,15 +60,17 @@ export default function Home() {
           localStorage.setItem("lastUpdateTime", currentTime.toString());
           return newAmount;
         });
+        // Güncelleme yapıldı, true döndür
+        return true;
       }
+      // Güncelleme yapılmadı, false döndür
+      return false;
     };
 
     const setupInterval = () => {
       if (interval) clearInterval(interval);
 
-      // Her çalıştığında önce geçmiş zamanı kontrol et
-      updateWalletBasedOnElapsedTime();
-
+      // interval'ı ayarla
       interval = setInterval(() => {
         setWalletAmount((prev) => {
           const newAmount = parseFloat((prev + INCREMENT).toFixed(2));
@@ -95,7 +97,7 @@ export default function Home() {
       resetInactivityTimer();
       if (isMining) {
         // Her aktivitede önce geçen zamanı kontrol et ve bakiyeyi güncelle
-        updateWalletBasedOnElapsedTime();
+        const updated = updateWalletBasedOnElapsedTime();
 
         if (!interval) {
           console.log("Kullanıcı geri döndü -> interval yeniden başlatılıyor.");
@@ -116,12 +118,24 @@ export default function Home() {
       localStorage.setItem("isMiningPaused", "false");
     }
 
+    // Gereksiz çift kontrolleri engellemek için throttle mekanizması
+    let lastActivityCheck = 0;
+    const ACTIVITY_THROTTLE = 500; // 500ms
+
+    const throttledHandleActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityCheck > ACTIVITY_THROTTLE) {
+        lastActivityCheck = now;
+        handleActivity();
+      }
+    };
+
     // Mobil ve masaüstü için aktivite dinleyicileri
-    window.addEventListener("mousemove", handleActivity);
-    window.addEventListener("keydown", handleActivity);
-    window.addEventListener("touchstart", handleActivity);
-    window.addEventListener("touchmove", handleActivity);
-    window.addEventListener("scroll", handleActivity);
+    window.addEventListener("mousemove", throttledHandleActivity);
+    window.addEventListener("keydown", throttledHandleActivity);
+    window.addEventListener("touchstart", throttledHandleActivity);
+    window.addEventListener("touchmove", throttledHandleActivity);
+    window.addEventListener("scroll", throttledHandleActivity);
     window.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         handleActivity();
@@ -137,22 +151,22 @@ export default function Home() {
       }
     });
 
-    // Periyodik kontrolü sağlayan zamanlayıcı
+    // Periyodik kontrolü sağlayan zamanlayıcı - daha az sıklıkta kontrol et
     const checkTimer = setInterval(() => {
       if (isMining && !isMiningPaused) {
         updateWalletBasedOnElapsedTime();
       }
-    }, 60000); // Her dakika kontrol et
+    }, 300000); // 5 dakikada bir kontrol et (eskiden 1 dakika)
 
     return () => {
       clearInterval(interval);
       clearInterval(checkTimer);
       clearTimeout(inactivityTimeout);
-      window.removeEventListener("mousemove", handleActivity);
-      window.removeEventListener("keydown", handleActivity);
-      window.removeEventListener("touchstart", handleActivity);
-      window.removeEventListener("touchmove", handleActivity);
-      window.removeEventListener("scroll", handleActivity);
+      window.removeEventListener("mousemove", throttledHandleActivity);
+      window.removeEventListener("keydown", throttledHandleActivity);
+      window.removeEventListener("touchstart", throttledHandleActivity);
+      window.removeEventListener("touchmove", throttledHandleActivity);
+      window.removeEventListener("scroll", throttledHandleActivity);
       window.removeEventListener("visibilitychange", handleActivity);
       window.removeEventListener("focus", handleActivity);
       window.removeEventListener("blur", handleActivity);
@@ -244,7 +258,7 @@ export default function Home() {
             </div>
           )}
           <motion.button
-            className="bg-red-400 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-full text-lg transition-colors ml-4"
+            className="bg-red-400 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-full text-lg transition-colors mt-4 md:mt-0 md:ml-4"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={resetBalance}
