@@ -1,4 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Firebase ile Coin Mining Simülasyonu
+
+Bu proje, cihaz kimlikleriyle kullanıcıların kayıt olmadan coin mining simülasyonu yapabildiği bir Next.js uygulamasıdır. LocalStorage yerine Firebase Firestore kullanarak daha güvenilir veri depolama ve gerçek zamanlı güncellemeler sağlar.
+
+## Özellikler
+
+- Kullanıcı kaydı/girişi gerektirmeden cihaz ID'si tabanlı kullanıcı takibi
+- Firebase Firestore ile güvenilir veri depolama
+- Cloud Functions ile arka planda otomatik bakiye güncellemeleri
+- Kullanıcı inaktifse mining'i otomatik durdurma
+- Gerçek zamanlı veri güncellemeleri (debug paneli dahil)
+
+## Başlarken
+
+1. Firebase'de bir proje oluşturun
+2. Firebase yapılandırma bilgilerinizi `app/firebase.js` dosyasına ekleyin
+3. Firebase CLI kurun: `npm install -g firebase-tools`
+4. Firebase Functions'ı deploy edin:
+   ```
+   cd firebase-functions
+   firebase deploy --only functions
+   ```
+5. Next.js uygulamasını başlatın:
+   ```
+   npm run dev
+   ```
+
+## Cloud Functions Nasıl Çalışır?
+
+`updateMinerBalances` fonksiyonu, her 10 dakikada bir aşağıdaki işlemleri gerçekleştirir:
+
+1. Aktif olarak mining yapan ve duraklatılmayan kullanıcıları bulur
+2. Her kullanıcı için son güncelleme zamanından bu yana geçen periyot sayısını hesaplar
+3. 12 saat inaktif olan kullanıcılar için mining'i duraklatır
+4. Diğer kullanıcılar için geçen periyot sayısına göre bakiyelerini günceller
+
+Bu sayede:
+
+- Sayfa açık olmasa bile bakiyeler güncellenir
+- Güvenilir zamanlama ve veri depolama sağlanır
+- Artık LocalStorage ile ilgili sorunlar yaşanmaz
 
 ## Getting Started
 
