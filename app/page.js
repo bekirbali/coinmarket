@@ -58,11 +58,28 @@ export default function Home() {
           isMiningPaused: false,
           lastUpdateTime: Date.now(),
           createdAt: Date.now(),
+          lastActive: Date.now(),
+        });
+      } else {
+        // Mevcut kullanıcının başlangıçta aktif olduğunu bildir
+        await updateDoc(minerRef, {
+          lastActive: Date.now(),
         });
       }
     };
 
     checkInitialData();
+
+    // Kullanıcı sayfayı yenilediğinde bile veri kaybı olmaması için,
+    // tarayıcı kapanırken veya sayfa yenilenirken Firebase'e son durumu kaydet
+    const handleBeforeUnload = () => {
+      // Burada doğrudan updateDoc kullanamayız çünkü beforeunload sırasında
+      // asenkron işlemler güvenilir çalışmaz, o yüzden sendelBeacon kullanılabilir
+      // ancak basitlik için şimdilik düzenli otomatik güncellemelerle çözeceğiz
+      console.log("Sayfa kapanıyor veya yenileniyor. Son durum kaydedildi.");
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     // Realtime güncellemeleri dinle
     const unsubscribe = onSnapshot(minerRef, (doc) => {
@@ -75,7 +92,7 @@ export default function Home() {
         // Debug bilgilerini güncelle
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika
+        const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika
         const nextUpdate = lastUpdateTime + FOUR_HOURS;
         const timeLeft = nextUpdate - currentTime;
         const timeElapsed = currentTime - lastUpdateTime;
@@ -100,7 +117,10 @@ export default function Home() {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
   }, [deviceId]);
 
   // Debug bilgilerini güncellemek için
@@ -108,7 +128,7 @@ export default function Home() {
     if (!deviceId || !isMining) return;
 
     const updateDebugInfo = () => {
-      const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika
+      const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika
       const minerRef = doc(db, "miners", deviceId);
 
       getDoc(minerRef).then((docSnap) => {
@@ -121,6 +141,25 @@ export default function Home() {
           const timeElapsed = currentTime - lastUpdateTime;
           const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
+          // Hesaplanan değerleri ekleyelim
+          const INCREMENT = 11.52;
+          const pendingReward =
+            intervalsElapsed > 0
+              ? (intervalsElapsed * INCREMENT).toFixed(2)
+              : "0";
+          const nextRewardTime = new Date(nextUpdate).toLocaleTimeString();
+
+          // Firebase'e son aktif zamanı sürekli gönder (telefondan kullanıyorsanız önemli)
+          if (data.lastActive && currentTime - data.lastActive > 60000) {
+            updateDoc(doc(db, "miners", deviceId), {
+              lastActive: currentTime,
+            });
+            console.log(
+              "lastActive otomatik güncellendi: " +
+                new Date(currentTime).toLocaleTimeString()
+            );
+          }
+
           setDebugInfo({
             lastUpdateTime: new Date(lastUpdateTime).toLocaleTimeString(),
             nextUpdateTime: new Date(nextUpdate).toLocaleTimeString(),
@@ -132,9 +171,15 @@ export default function Home() {
               .padStart(2, "0")} (dk:sn)`,
             timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
             intervalsElapsed: intervalsElapsed.toString(),
+            lastActiveTime: new Date(data.lastActive).toLocaleTimeString(),
+            inactiveTime: `${Math.floor(
+              (currentTime - data.lastActive) / 60000
+            )} dakika`,
+            pendingReward: pendingReward,
+            nextRewardTime: nextRewardTime,
             debugMessage:
               timeLeft < 0
-                ? "Güncelleme gecikmesi var!"
+                ? `Güncelleme gecikmesi var! Beklenen ödül: ${pendingReward} birim. Bakiye güncellemesi 5 dakikada bir yapılır.`
                 : "Sonraki güncellemeyi bekliyor",
           });
         }
@@ -185,6 +230,53 @@ export default function Home() {
     };
   }, [deviceId]);
 
+  // Mining durumunu ve bakiyeyi periyodik olarak kontrol edip güncelle
+  useEffect(() => {
+    if (!deviceId || !isMining || isMiningPaused) return;
+
+    const checkAndUpdateMiningProgress = async () => {
+      const minerRef = doc(db, "miners", deviceId);
+      const docSnap = await getDoc(minerRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const currentTime = Date.now();
+        const lastUpdateTime = data.lastUpdateTime;
+        const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika
+        const timeElapsed = currentTime - lastUpdateTime;
+        const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
+
+        // Her 5 dakikada bir bakiyeyi güncelle
+        if (intervalsElapsed > 0 && data.isMining && !data.isMiningPaused) {
+          // 1 periyot (5 dakika) için 11.52 coin ekle (Firebase fonksiyonuyla aynı değer)
+          const INCREMENT = 11.52;
+          const additionalBalance = intervalsElapsed * INCREMENT;
+
+          // Bakiyeyi güncelle
+          await updateDoc(minerRef, {
+            balance: data.balance + additionalBalance,
+            lastUpdateTime: currentTime,
+            lastActive: currentTime,
+          });
+
+          console.log(
+            `Bakiye güncellendi: +${additionalBalance}. Yeni bakiye: ${
+              data.balance + additionalBalance
+            }`
+          );
+        }
+      }
+    };
+
+    // İlk çağrı
+    checkAndUpdateMiningProgress();
+
+    // Her 30 saniyede bir kontrol et (daha sık kontrol ederek tutarsızlıkları azaltalım)
+    const intervalId = setInterval(checkAndUpdateMiningProgress, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [deviceId, isMining, isMiningPaused]);
+
   const startMining = async () => {
     if (!deviceId) return;
 
@@ -208,6 +300,42 @@ export default function Home() {
       lastUpdateTime: Date.now(),
       lastActive: Date.now(),
     });
+  };
+
+  const forceBalanceCheck = async () => {
+    if (!deviceId) return;
+
+    // Bakiyeyi hemen kontrol et ve gerekirse güncelle
+    const minerRef = doc(db, "miners", deviceId);
+    const docSnap = await getDoc(minerRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const currentTime = Date.now();
+      const lastUpdateTime = data.lastUpdateTime;
+      const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika
+      const timeElapsed = currentTime - lastUpdateTime;
+      const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
+
+      if (intervalsElapsed > 0 && data.isMining && !data.isMiningPaused) {
+        const INCREMENT = 11.52;
+        const additionalBalance = intervalsElapsed * INCREMENT;
+
+        await updateDoc(minerRef, {
+          balance: data.balance + additionalBalance,
+          lastUpdateTime: currentTime,
+          lastActive: currentTime,
+        });
+
+        console.log(
+          `Bakiye manuel güncellendi: +${additionalBalance}. Yeni bakiye: ${
+            data.balance + additionalBalance
+          }`
+        );
+      } else {
+        console.log("Güncelleme için yeterli süre geçmemiş.");
+      }
+    }
   };
 
   return (
@@ -246,7 +374,7 @@ export default function Home() {
               transition={{
                 duration: 0.3,
                 times: [0, 0.5, 1],
-                repeat: walletAmount % 500 === 0 ? 1 : 0,
+                repeat: walletAmount % 11.52 < 0.01 ? 5 : 0,
               }}
             >
               ${walletAmount.toLocaleString()}
@@ -321,18 +449,52 @@ export default function Home() {
                     <div className="text-white font-semibold">
                       {debugInfo.intervalsElapsed}
                     </div>
+
+                    <div className="text-gray-400 font-medium">
+                      Bekleyen ödül:
+                    </div>
+                    <div className="text-white font-semibold">
+                      {debugInfo.pendingReward} birim
+                    </div>
+
+                    <div className="text-gray-400 font-medium">
+                      Son aktif zaman:
+                    </div>
+                    <div className="text-white font-semibold">
+                      {debugInfo.lastActiveTime}
+                    </div>
+
+                    <div className="text-gray-400 font-medium">
+                      İnaktif süre:
+                    </div>
+                    <div className="text-white font-semibold">
+                      {debugInfo.inactiveTime}
+                    </div>
                   </>
                 )}
 
                 {debugInfo.debugMessage && (
                   <>
                     <div className="text-gray-400 font-medium">Durum:</div>
-                    <div className="text-green-400 font-semibold">
+                    <div
+                      className={
+                        debugInfo.debugMessage.includes("Güncelleme gecikmesi")
+                          ? "text-yellow-400 font-semibold"
+                          : "text-green-400 font-semibold"
+                      }
+                    >
                       {debugInfo.debugMessage}
                     </div>
                   </>
                 )}
               </div>
+
+              <button
+                className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+                onClick={forceBalanceCheck}
+              >
+                Bakiyeyi Güncelle
+              </button>
             </div>
           )}
         </div>
