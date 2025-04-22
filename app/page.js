@@ -9,6 +9,12 @@ export default function Home() {
   const [walletAmount, setWalletAmount] = useState(0);
   const [isMining, setIsMining] = useState(false);
   const [isMiningPaused, setIsMiningPaused] = useState(false);
+  const [debugInfo, setDebugInfo] = useState({
+    lastUpdateTime: "Yok",
+    nextUpdateTime: "Yok",
+    currentTime: "Yok",
+    timeLeft: "Yok",
+  });
 
   useEffect(() => {
     // Sayfa yüklendiğinde localStorage'dan verileri kontrol et
@@ -34,7 +40,7 @@ export default function Home() {
 
   useEffect(() => {
     // const FOUR_HOURS = 4 * 60 * 60 * 1000;
-    const FOUR_HOURS = 1 * 30 * 60 * 1000;
+    const FOUR_HOURS = 1 * 10 * 60 * 1000;
     // const FOUR_HOURS = 10000;
     const INCREMENT = 11.52;
     // const INCREMENT = 100;
@@ -42,6 +48,7 @@ export default function Home() {
     // const INACTIVITY_LIMIT = 60000;
     let interval = null;
     let inactivityTimeout = null;
+    let debugInterval = null;
 
     const updateWalletBasedOnElapsedTime = () => {
       const lastUpdateTime = localStorage.getItem("lastUpdateTime");
@@ -51,6 +58,15 @@ export default function Home() {
       const timeElapsed = currentTime - parseInt(lastUpdateTime);
       const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
+      // Debug bilgisini güncelle
+      setDebugInfo((prev) => ({
+        ...prev,
+        lastUpdateTime: new Date(parseInt(lastUpdateTime)).toLocaleTimeString(),
+        currentTime: new Date(currentTime).toLocaleTimeString(),
+        timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
+        intervalsElapsed: intervalsElapsed.toString(),
+      }));
+
       if (intervalsElapsed > 0) {
         setWalletAmount((prev) => {
           const newAmount = parseFloat(
@@ -58,6 +74,19 @@ export default function Home() {
           );
           localStorage.setItem("walletAmount", newAmount.toString());
           localStorage.setItem("lastUpdateTime", currentTime.toString());
+
+          // Debug bilgisini güncelle
+          setDebugInfo((prevDebug) => ({
+            ...prevDebug,
+            lastUpdateTime: new Date(currentTime).toLocaleTimeString(),
+            nextUpdateTime: new Date(
+              currentTime + FOUR_HOURS
+            ).toLocaleTimeString(),
+            debugMessage: `Bakiye güncellendi: +${
+              intervalsElapsed * INCREMENT
+            }`,
+          }));
+
           return newAmount;
         });
         // Güncelleme yapıldı, true döndür
@@ -74,8 +103,20 @@ export default function Home() {
       interval = setInterval(() => {
         setWalletAmount((prev) => {
           const newAmount = parseFloat((prev + INCREMENT).toFixed(2));
+          const currentTime = Date.now();
           localStorage.setItem("walletAmount", newAmount.toString());
-          localStorage.setItem("lastUpdateTime", Date.now().toString());
+          localStorage.setItem("lastUpdateTime", currentTime.toString());
+
+          // Debug bilgisini güncelle
+          setDebugInfo((prevDebug) => ({
+            ...prevDebug,
+            lastUpdateTime: new Date(currentTime).toLocaleTimeString(),
+            nextUpdateTime: new Date(
+              currentTime + FOUR_HOURS
+            ).toLocaleTimeString(),
+            debugMessage: `Bakiye otomatik güncellendi: +${INCREMENT}`,
+          }));
+
           return newAmount;
         });
       }, FOUR_HOURS);
@@ -108,11 +149,41 @@ export default function Home() {
       }
     };
 
+    // Debug bilgilerini sürekli güncelle
+    const setupDebugInterval = () => {
+      if (debugInterval) clearInterval(debugInterval);
+
+      debugInterval = setInterval(() => {
+        const lastUpdateTime = localStorage.getItem("lastUpdateTime");
+        if (lastUpdateTime && isMining && !isMiningPaused) {
+          const currentTime = Date.now();
+          const nextUpdate = parseInt(lastUpdateTime) + FOUR_HOURS;
+          const timeLeft = nextUpdate - currentTime;
+
+          setDebugInfo((prev) => ({
+            ...prev,
+            currentTime: new Date(currentTime).toLocaleTimeString(),
+            nextUpdateTime: new Date(nextUpdate).toLocaleTimeString(),
+            timeLeft: `${Math.floor(timeLeft / 60000)}:${Math.floor(
+              (timeLeft % 60000) / 1000
+            )
+              .toString()
+              .padStart(2, "0")} (dk:sn)`,
+            debugMessage:
+              timeLeft < 0
+                ? "Güncelleme gecikmesi var!"
+                : "Sonraki güncellemeyi bekliyor",
+          }));
+        }
+      }, 1000);
+    };
+
     // Mining başlatıldıysa
     if (isMining) {
       // Geçmiş sürede oluşan kazancı hesapla ve interval başlat
       updateWalletBasedOnElapsedTime();
       setupInterval();
+      setupDebugInterval();
       resetInactivityTimer();
       setIsMiningPaused(false);
       localStorage.setItem("isMiningPaused", "false");
@@ -161,6 +232,7 @@ export default function Home() {
     return () => {
       clearInterval(interval);
       clearInterval(checkTimer);
+      clearInterval(debugInterval);
       clearTimeout(inactivityTimeout);
       window.removeEventListener("mousemove", throttledHandleActivity);
       window.removeEventListener("keydown", throttledHandleActivity);
@@ -265,6 +337,43 @@ export default function Home() {
           >
             Bakiyeyi Sıfırla
           </motion.button>
+
+          {/* Debug Panel */}
+          {isMining && (
+            <div className="mt-6 bg-gray-100 p-4 rounded-lg text-sm border border-gray-300">
+              <h3 className="font-bold mb-2">Debug Bilgileri:</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div>Son güncelleme:</div>
+                <div>{debugInfo.lastUpdateTime}</div>
+
+                <div>Sonraki güncelleme:</div>
+                <div>{debugInfo.nextUpdateTime}</div>
+
+                <div>Şu anki zaman:</div>
+                <div>{debugInfo.currentTime}</div>
+
+                <div>Kalan süre:</div>
+                <div>{debugInfo.timeLeft}</div>
+
+                {debugInfo.timeElapsed && (
+                  <>
+                    <div>Geçen süre:</div>
+                    <div>{debugInfo.timeElapsed}</div>
+
+                    <div>Geçen periyot sayısı:</div>
+                    <div>{debugInfo.intervalsElapsed}</div>
+                  </>
+                )}
+
+                {debugInfo.debugMessage && (
+                  <>
+                    <div>Durum:</div>
+                    <div>{debugInfo.debugMessage}</div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         <div className="md:w-1/2 flex justify-center">
           <motion.div
