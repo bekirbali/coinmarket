@@ -4,11 +4,14 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import InAppBrowserWarning from "./components/InAppBrowserWarning";
 import MobileOptimizationInfo from "./components/MobileOptimizationInfo";
+import { db } from "./firebase";
+import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 
 export default function Home() {
   const [walletAmount, setWalletAmount] = useState(0);
   const [isMining, setIsMining] = useState(false);
   const [isMiningPaused, setIsMiningPaused] = useState(false);
+  const [deviceId, setDeviceId] = useState("");
   const [debugInfo, setDebugInfo] = useState({
     lastUpdateTime: "Yok",
     nextUpdateTime: "Yok",
@@ -16,360 +19,195 @@ export default function Home() {
     timeLeft: "Yok",
   });
 
-  const intervalRef = useRef(null);
   const debugIntervalRef = useRef(null);
-  const inactivityTimeoutRef = useRef(null);
 
+  // Cihaz ID'si oluştur veya al
   useEffect(() => {
-    // Sayfa yüklendiğinde localStorage'dan verileri kontrol et
-    const storedMiningState = localStorage.getItem("isMining");
-    const storedAmount = localStorage.getItem("walletAmount");
-    const storedPausedState = localStorage.getItem("isMiningPaused");
+    const getOrCreateDeviceId = () => {
+      let id = localStorage.getItem("deviceId");
+      if (!id) {
+        id =
+          "device_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).substring(2);
+        localStorage.setItem("deviceId", id);
+      }
+      return id;
+    };
 
-    // Mining durumunu kontrol et
-    if (storedMiningState === "true") {
-      setIsMining(true);
-    }
-
-    // Mining duraklatma durumunu kontrol et
-    if (storedPausedState === "true") {
-      setIsMiningPaused(true);
-    }
-
-    // Bakiye değerini yükle
-    if (storedAmount) {
-      setWalletAmount(parseFloat(storedAmount));
-    }
+    const id = getOrCreateDeviceId();
+    setDeviceId(id);
   }, []);
 
+  // Firebase'den veri almak ve realtime güncellemeleri dinlemek için
   useEffect(() => {
-    // const FOUR_HOURS = 4 * 60 * 60 * 1000;
-    const FOUR_HOURS = 1 * 10 * 60 * 1000;
-    // const FOUR_HOURS = 10000;
-    const INCREMENT = 11.52;
-    // const INCREMENT = 100;
-    const INACTIVITY_LIMIT = 12 * 60 * 60 * 1000; // 12 saat
-    // const INACTIVITY_LIMIT = 60000;
+    if (!deviceId) return;
 
-    const updateWalletBasedOnElapsedTime = () => {
-      const lastUpdateTime = localStorage.getItem("lastUpdateTime");
-      if (!lastUpdateTime) return;
+    const minerRef = doc(db, "miners", deviceId);
 
-      const currentTime = Date.now();
-      const timeElapsed = currentTime - parseInt(lastUpdateTime);
-      const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
+    // İlk veri kontrolü
+    const checkInitialData = async () => {
+      const docSnap = await getDoc(minerRef);
 
-      // Debug bilgisini güncelle
-      setDebugInfo((prev) => ({
-        ...prev,
-        lastUpdateTime: new Date(parseInt(lastUpdateTime)).toLocaleTimeString(),
-        currentTime: new Date(currentTime).toLocaleTimeString(),
-        timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
-        intervalsElapsed: intervalsElapsed.toString(),
-      }));
-
-      if (intervalsElapsed > 0) {
-        setWalletAmount((prev) => {
-          const newAmount = parseFloat(
-            (prev + intervalsElapsed * INCREMENT).toFixed(2)
-          );
-          localStorage.setItem("walletAmount", newAmount.toString());
-          localStorage.setItem("lastUpdateTime", currentTime.toString());
-
-          // Debug bilgisini güncelle
-          setDebugInfo((prevDebug) => ({
-            ...prevDebug,
-            lastUpdateTime: new Date(currentTime).toLocaleTimeString(),
-            nextUpdateTime: new Date(
-              currentTime + FOUR_HOURS
-            ).toLocaleTimeString(),
-            debugMessage: `Bakiye güncellendi: +${
-              intervalsElapsed * INCREMENT
-            }`,
-          }));
-
-          return newAmount;
+      if (!docSnap.exists()) {
+        // Yeni kullanıcı, ilk kaydı oluştur
+        await setDoc(minerRef, {
+          balance: 0,
+          isMining: false,
+          isMiningPaused: false,
+          lastUpdateTime: Date.now(),
+          createdAt: Date.now(),
         });
-        // Güncelleme yapıldı, true döndür
-        return true;
-      }
-      // Güncelleme yapılmadı, false döndür
-      return false;
-    };
-
-    const setupInterval = () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-
-      // interval'ı ayarla
-      intervalRef.current = setInterval(() => {
-        setWalletAmount((prev) => {
-          const newAmount = parseFloat((prev + INCREMENT).toFixed(2));
-          const currentTime = Date.now();
-          localStorage.setItem("walletAmount", newAmount.toString());
-          localStorage.setItem("lastUpdateTime", currentTime.toString());
-
-          // Debug bilgisini güncelle
-          setDebugInfo((prevDebug) => ({
-            ...prevDebug,
-            lastUpdateTime: new Date(currentTime).toLocaleTimeString(),
-            nextUpdateTime: new Date(
-              currentTime + FOUR_HOURS
-            ).toLocaleTimeString(),
-            debugMessage: `Bakiye otomatik güncellendi: +${INCREMENT}`,
-          }));
-
-          return newAmount;
-        });
-      }, FOUR_HOURS);
-    };
-
-    const resetInactivityTimer = () => {
-      if (inactivityTimeoutRef.current)
-        clearTimeout(inactivityTimeoutRef.current);
-
-      inactivityTimeoutRef.current = setTimeout(() => {
-        console.log("8 saat inaktif -> interval durduruluyor.");
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-        setIsMiningPaused(true);
-        localStorage.setItem("isMiningPaused", "true");
-      }, INACTIVITY_LIMIT);
-    };
-
-    const handleActivity = () => {
-      resetInactivityTimer();
-      if (isMining) {
-        // Her aktivitede önce geçen zamanı kontrol et ve bakiyeyi güncelle
-        const updated = updateWalletBasedOnElapsedTime();
-
-        if (!intervalRef.current) {
-          console.log("Kullanıcı geri döndü -> interval yeniden başlatılıyor.");
-          setupInterval();
-          setIsMiningPaused(false);
-          localStorage.setItem("isMiningPaused", "false");
-        }
       }
     };
 
-    // Debug bilgilerini sürekli güncelle
-    const setupDebugInterval = () => {
-      if (debugIntervalRef.current) clearInterval(debugIntervalRef.current);
+    checkInitialData();
 
-      debugIntervalRef.current = setInterval(() => {
-        const lastUpdateTime = localStorage.getItem("lastUpdateTime");
-        if (lastUpdateTime && isMining && !isMiningPaused) {
+    // Realtime güncellemeleri dinle
+    const unsubscribe = onSnapshot(minerRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setWalletAmount(data.balance || 0);
+        setIsMining(data.isMining || false);
+        setIsMiningPaused(data.isMiningPaused || false);
+
+        // Debug bilgilerini güncelle
+        const currentTime = Date.now();
+        const lastUpdateTime = data.lastUpdateTime;
+        const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika
+        const nextUpdate = lastUpdateTime + FOUR_HOURS;
+        const timeLeft = nextUpdate - currentTime;
+        const timeElapsed = currentTime - lastUpdateTime;
+        const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
+
+        setDebugInfo({
+          lastUpdateTime: new Date(lastUpdateTime).toLocaleTimeString(),
+          nextUpdateTime: new Date(nextUpdate).toLocaleTimeString(),
+          currentTime: new Date(currentTime).toLocaleTimeString(),
+          timeLeft: `${Math.floor(timeLeft / 60000)}:${Math.floor(
+            (timeLeft % 60000) / 1000
+          )
+            .toString()
+            .padStart(2, "0")} (dk:sn)`,
+          timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
+          intervalsElapsed: intervalsElapsed.toString(),
+          debugMessage:
+            timeLeft < 0
+              ? "Güncelleme gecikmesi var!"
+              : "Sonraki güncellemeyi bekliyor",
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [deviceId]);
+
+  // Debug bilgilerini güncellemek için
+  useEffect(() => {
+    if (!deviceId || !isMining) return;
+
+    const updateDebugInfo = () => {
+      const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika
+      const minerRef = doc(db, "miners", deviceId);
+
+      getDoc(minerRef).then((docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
           const currentTime = Date.now();
-          const nextUpdate = parseInt(lastUpdateTime) + FOUR_HOURS;
+          const lastUpdateTime = data.lastUpdateTime;
+          const nextUpdate = lastUpdateTime + FOUR_HOURS;
           const timeLeft = nextUpdate - currentTime;
+          const timeElapsed = currentTime - lastUpdateTime;
+          const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
-          setDebugInfo((prev) => ({
-            ...prev,
-            currentTime: new Date(currentTime).toLocaleTimeString(),
+          setDebugInfo({
+            lastUpdateTime: new Date(lastUpdateTime).toLocaleTimeString(),
             nextUpdateTime: new Date(nextUpdate).toLocaleTimeString(),
+            currentTime: new Date(currentTime).toLocaleTimeString(),
             timeLeft: `${Math.floor(timeLeft / 60000)}:${Math.floor(
               (timeLeft % 60000) / 1000
             )
               .toString()
               .padStart(2, "0")} (dk:sn)`,
+            timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
+            intervalsElapsed: intervalsElapsed.toString(),
             debugMessage:
               timeLeft < 0
                 ? "Güncelleme gecikmesi var!"
                 : "Sonraki güncellemeyi bekliyor",
-          }));
-        }
-      }, 1000);
-    };
-
-    // Mining başlatıldıysa
-    if (isMining) {
-      // Geçmiş sürede oluşan kazancı hesapla ve interval başlat
-      updateWalletBasedOnElapsedTime();
-      setupInterval();
-      setupDebugInterval();
-      resetInactivityTimer();
-      setIsMiningPaused(false);
-      localStorage.setItem("isMiningPaused", "false");
-
-      // İlk yükleme debug bilgisi
-      const lastUpdateTime = localStorage.getItem("lastUpdateTime");
-      if (lastUpdateTime) {
-        const currentTime = Date.now();
-        const timeElapsed = currentTime - parseInt(lastUpdateTime);
-
-        setDebugInfo((prev) => ({
-          ...prev,
-          lastUpdateTime: new Date(
-            parseInt(lastUpdateTime)
-          ).toLocaleTimeString(),
-          currentTime: new Date(currentTime).toLocaleTimeString(),
-          timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
-          debugMessage:
-            timeElapsed > 300000
-              ? "Uzun süredir kapalıydı - kontrol edildi"
-              : "Sayfa açıldı",
-        }));
-      }
-    }
-
-    // Gereksiz çift kontrolleri engellemek için throttle mekanizması
-    let lastActivityCheck = 0;
-    const ACTIVITY_THROTTLE = 500; // 500ms
-
-    const throttledHandleActivity = () => {
-      const now = Date.now();
-      if (now - lastActivityCheck > ACTIVITY_THROTTLE) {
-        lastActivityCheck = now;
-        handleActivity();
-      }
-    };
-
-    // Mobil ve masaüstü için aktivite dinleyicileri
-    window.addEventListener("mousemove", throttledHandleActivity);
-    window.addEventListener("keydown", throttledHandleActivity);
-    window.addEventListener("touchstart", throttledHandleActivity);
-    window.addEventListener("touchmove", throttledHandleActivity);
-    window.addEventListener("scroll", throttledHandleActivity);
-    window.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        // Sayfa görünür olduğunda geçen zamanı tam olarak hesapla
-        const lastUpdateTime = localStorage.getItem("lastUpdateTime");
-        if (lastUpdateTime && isMining) {
-          const currentTime = Date.now();
-          const timeElapsed = currentTime - parseInt(lastUpdateTime);
-
-          // Debug bilgisini güncelle
-          setDebugInfo((prev) => ({
-            ...prev,
-            lastUpdateTime: new Date(
-              parseInt(lastUpdateTime)
-            ).toLocaleTimeString(),
-            currentTime: new Date(currentTime).toLocaleTimeString(),
-            timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
-            debugMessage: "Sayfa görünür oldu - geçen süre kontrol ediliyor",
-          }));
-
-          // Zamanı kontrol et ve bakiyeyi güncelle
-          updateWalletBasedOnElapsedTime();
-
-          // Interval durmuşsa yeniden başlat
-          if (!intervalRef.current && !isMiningPaused) {
-            setupInterval();
-          }
-        }
-
-        handleActivity();
-      } else {
-        // Sayfa gizlendiğinde son zamanı KAYDETMİYORUZ! Sadece debug mesajını güncelle
-        if (isMining) {
-          setDebugInfo((prev) => ({
-            ...prev,
-            debugMessage:
-              "Sayfa arka plana alındı - son güncelleme zamanı korunuyor",
-          }));
-        }
-      }
-    });
-
-    // App focus/blur olayları için
-    window.addEventListener("focus", handleActivity);
-    window.addEventListener("blur", () => {
-      // Sayfa blur olduğunda son zamanı KAYDETME
-      if (isMining) {
-        // localStorage.setItem("lastUpdateTime", Date.now().toString()); - BU SATIRI KALDIRDIK
-        setDebugInfo((prev) => ({
-          ...prev,
-          debugMessage:
-            "Sayfa odağını kaybetti - son güncelleme zamanı korunuyor",
-        }));
-      }
-    });
-
-    // Periyodik kontrolü sağlayan zamanlayıcı - daha az sıklıkta kontrol et
-    const checkTimer = setInterval(() => {
-      if (isMining && !isMiningPaused) {
-        updateWalletBasedOnElapsedTime();
-      }
-    }, 300000); // 5 dakikada bir kontrol et (eskiden 1 dakika)
-
-    return () => {
-      clearInterval(intervalRef.current);
-      clearInterval(checkTimer);
-      clearInterval(debugIntervalRef.current);
-      clearTimeout(inactivityTimeoutRef.current);
-      window.removeEventListener("mousemove", throttledHandleActivity);
-      window.removeEventListener("keydown", throttledHandleActivity);
-      window.removeEventListener("touchstart", throttledHandleActivity);
-      window.removeEventListener("touchmove", throttledHandleActivity);
-      window.removeEventListener("scroll", throttledHandleActivity);
-      window.removeEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") {
-          // Sayfa görünür olduğunda geçen zamanı tam olarak hesapla
-          const lastUpdateTime = localStorage.getItem("lastUpdateTime");
-          if (lastUpdateTime && isMining) {
-            const currentTime = Date.now();
-            const timeElapsed = currentTime - parseInt(lastUpdateTime);
-
-            // Debug bilgisini güncelle
-            setDebugInfo((prev) => ({
-              ...prev,
-              lastUpdateTime: new Date(
-                parseInt(lastUpdateTime)
-              ).toLocaleTimeString(),
-              currentTime: new Date(currentTime).toLocaleTimeString(),
-              timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
-              debugMessage: "Sayfa görünür oldu - geçen süre kontrol ediliyor",
-            }));
-
-            // Zamanı kontrol et ve bakiyeyi güncelle
-            updateWalletBasedOnElapsedTime();
-
-            // Interval durmuşsa yeniden başlat
-            if (!intervalRef.current && !isMiningPaused) {
-              setupInterval();
-            }
-          }
-
-          handleActivity();
-        } else {
-          // Sayfa gizlendiğinde son zamanı KAYDETMİYORUZ! Sadece debug mesajını güncelle
-          if (isMining) {
-            setDebugInfo((prev) => ({
-              ...prev,
-              debugMessage:
-                "Sayfa arka plana alındı - son güncelleme zamanı korunuyor",
-            }));
-          }
+          });
         }
       });
-      window.removeEventListener("focus", handleActivity);
-      window.removeEventListener("blur", handleActivity);
     };
-  }, [isMining]);
 
-  const startMining = () => {
-    // Mining başlatıldığında, lastUpdateTime'ı kontrol et ve yoksa ayarla
-    if (!localStorage.getItem("lastUpdateTime")) {
-      localStorage.setItem("lastUpdateTime", Date.now().toString());
-    }
-    setIsMining(true);
-    setIsMiningPaused(false);
-    localStorage.setItem("isMining", "true");
-    localStorage.setItem("isMiningPaused", "false");
+    // Her saniye debug bilgilerini güncelle
+    debugIntervalRef.current = setInterval(updateDebugInfo, 1000);
+
+    // Sayfa görünürlüğü değiştiğinde Firebase'i bilgilendir
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && deviceId) {
+        updateDoc(doc(db, "miners", deviceId), {
+          lastActive: Date.now(),
+        });
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(debugIntervalRef.current);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [deviceId, isMining]);
+
+  // Kullanıcı aktivitesini takip et
+  useEffect(() => {
+    if (!deviceId) return;
+
+    const handleActivity = () => {
+      updateDoc(doc(db, "miners", deviceId), {
+        lastActive: Date.now(),
+      });
+    };
+
+    // Etkinlik dinleyicileri ekle
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+    window.addEventListener("touchstart", handleActivity);
+    window.addEventListener("scroll", handleActivity);
+
+    return () => {
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("touchstart", handleActivity);
+      window.removeEventListener("scroll", handleActivity);
+    };
+  }, [deviceId]);
+
+  const startMining = async () => {
+    if (!deviceId) return;
+
+    const minerRef = doc(db, "miners", deviceId);
+    await updateDoc(minerRef, {
+      isMining: true,
+      isMiningPaused: false,
+      lastUpdateTime: Date.now(),
+      lastActive: Date.now(),
+    });
   };
 
-  const resetBalance = () => {
-    // Bakiyeyi sıfırla
-    setWalletAmount(0);
-    localStorage.setItem("walletAmount", "0");
+  const resetBalance = async () => {
+    if (!deviceId) return;
 
-    // Mining durumunu sıfırla
-    setIsMining(false);
-    setIsMiningPaused(false);
-    localStorage.setItem("isMining", "false");
-    localStorage.setItem("isMiningPaused", "false");
-
-    // Son güncelleme zamanını temizle
-    localStorage.removeItem("lastUpdateTime");
+    const minerRef = doc(db, "miners", deviceId);
+    await updateDoc(minerRef, {
+      balance: 0,
+      isMining: false,
+      isMiningPaused: false,
+      lastUpdateTime: Date.now(),
+      lastActive: Date.now(),
+    });
   };
 
   return (
