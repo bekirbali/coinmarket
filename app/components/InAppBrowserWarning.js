@@ -15,10 +15,7 @@ const InAppBrowserWarning = () => {
     const isOtherInAppBrowser =
       userAgent.includes("FBAN") ||
       userAgent.includes("Twitter") ||
-      userAgent.includes("TikTok") ||
-      (userAgent.includes("Mobile") &&
-        userAgent.includes("Safari") &&
-        !navigator.standalone);
+      userAgent.includes("TikTok");
 
     if (isInstagramBrowser) {
       setWarningType("social");
