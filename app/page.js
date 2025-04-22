@@ -34,7 +34,7 @@ export default function Home() {
 
   useEffect(() => {
     // const FOUR_HOURS = 4 * 60 * 60 * 1000;
-    const FOUR_HOURS = 1 * 60 * 60 * 1000;
+    const FOUR_HOURS = 1 * 30 * 60 * 1000;
     // const FOUR_HOURS = 10000;
     const INCREMENT = 11.52;
     // const INCREMENT = 100;
