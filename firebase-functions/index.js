@@ -4,7 +4,7 @@ admin.initializeApp();
 
 const db = admin.firestore();
 const INCREMENT = 11.52;
-const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
+const FOUR_HOURS = 60 * 60 * 1000; // 1 saat (test için)
 // const FOUR_HOURS = 4 * 60 * 60 * 1000; // 4 saat (gerçek değer)
 const INACTIVITY_LIMIT = 12 * 60 * 60 * 1000; // 12 saat
 
