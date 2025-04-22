@@ -169,8 +169,18 @@ export default function Home() {
   };
 
   const resetBalance = () => {
+    // Bakiyeyi sıfırla
     setWalletAmount(0);
     localStorage.setItem("walletAmount", "0");
+
+    // Mining durumunu sıfırla
+    setIsMining(false);
+    setIsMiningPaused(false);
+    localStorage.setItem("isMining", "false");
+    localStorage.setItem("isMiningPaused", "false");
+
+    // Son güncelleme zamanını temizle
+    localStorage.removeItem("lastUpdateTime");
   };
 
   return (
