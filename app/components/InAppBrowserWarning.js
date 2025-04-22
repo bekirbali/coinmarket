@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 const InAppBrowserWarning = () => {
   const [showWarning, setShowWarning] = useState(false);
+  const [warningType, setWarningType] = useState("");
 
   useEffect(() => {
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -11,7 +12,19 @@ const InAppBrowserWarning = () => {
     const isInstagramBrowser =
       userAgent.includes("Instagram") || userAgent.includes("FBAV");
 
+    const isOtherInAppBrowser =
+      userAgent.includes("FBAN") ||
+      userAgent.includes("Twitter") ||
+      userAgent.includes("TikTok") ||
+      (userAgent.includes("Mobile") &&
+        userAgent.includes("Safari") &&
+        !navigator.standalone);
+
     if (isInstagramBrowser) {
+      setWarningType("social");
+      setShowWarning(true);
+    } else if (isOtherInAppBrowser) {
+      setWarningType("inapp");
       setShowWarning(true);
     }
   }, []);
@@ -29,12 +42,28 @@ const InAppBrowserWarning = () => {
         color: "#856404",
       }}
     >
-      ⚠️ Bu sayfa Instagram veya Facebook içindeki tarayıcıda açılmış. Mining
-      özelliği düzgün çalışmayabilir.
-      <strong>
-        Sayfayı Chrome veya Safari gibi bir tarayıcıda yeniden açmanızı
-        öneriyoruz.
-      </strong>
+      {warningType === "social" ? (
+        <>
+          ⚠️ Bu sayfa Instagram veya Facebook içindeki tarayıcıda açılmış.
+          Mining özelliği düzgün çalışmayabilir.
+          <strong>
+            Sayfayı Chrome veya Safari gibi bir tarayıcıda yeniden açmanızı
+            öneriyoruz.
+          </strong>
+        </>
+      ) : (
+        <>
+          ⚠️ Bu sayfa bir uygulama içi tarayıcıda açılmış görünüyor. Mining
+          özelliğinin düzgün çalışması için lütfen sayfayı normal bir tarayıcıda
+          açın ve uygulamaya ekleyin.
+          <br />
+          <strong>
+            iPhone için: Safari → Paylaş → Ana Ekrana Ekle
+            <br />
+            Android için: Chrome → Menü → Ana Ekrana Ekle
+          </strong>
+        </>
+      )}
     </div>
   );
 };
