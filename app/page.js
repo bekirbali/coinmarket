@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import InAppBrowserWarning from "./components/InAppBrowserWarning";
+import MobileOptimizationInfo from "./components/MobileOptimizationInfo";
 
 export default function Home() {
   const [walletAmount, setWalletAmount] = useState(0);
@@ -33,16 +34,41 @@ export default function Home() {
 
   useEffect(() => {
     // const FOUR_HOURS = 4 * 60 * 60 * 1000;
-    const FOUR_HOURS = 10000;
-    // const INCREMENT = 11.52;
-    const INCREMENT = 100;
-    // const INACTIVITY_LIMIT = 8 * 60 * 60 * 1000; // 8 saat
-    const INACTIVITY_LIMIT = 60000;
+    const FOUR_HOURS = 1 * 60 * 60 * 1000;
+    // const FOUR_HOURS = 10000;
+    const INCREMENT = 11.52;
+    // const INCREMENT = 100;
+    const INACTIVITY_LIMIT = 12 * 60 * 60 * 1000; // 12 saat
+    // const INACTIVITY_LIMIT = 60000;
     let interval = null;
     let inactivityTimeout = null;
 
+    const updateWalletBasedOnElapsedTime = () => {
+      const lastUpdateTime = localStorage.getItem("lastUpdateTime");
+      if (!lastUpdateTime) return;
+
+      const currentTime = Date.now();
+      const timeElapsed = currentTime - parseInt(lastUpdateTime);
+      const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
+
+      if (intervalsElapsed > 0) {
+        setWalletAmount((prev) => {
+          const newAmount = parseFloat(
+            (prev + intervalsElapsed * INCREMENT).toFixed(2)
+          );
+          localStorage.setItem("walletAmount", newAmount.toString());
+          localStorage.setItem("lastUpdateTime", currentTime.toString());
+          return newAmount;
+        });
+      }
+    };
+
     const setupInterval = () => {
-      if (interval) return;
+      if (interval) clearInterval(interval);
+
+      // Her çalıştığında önce geçmiş zamanı kontrol et
+      updateWalletBasedOnElapsedTime();
+
       interval = setInterval(() => {
         setWalletAmount((prev) => {
           const newAmount = parseFloat((prev + INCREMENT).toFixed(2));
@@ -67,75 +93,90 @@ export default function Home() {
 
     const handleActivity = () => {
       resetInactivityTimer();
-      if (!interval && isMining) {
-        console.log("Kullanıcı geri döndü -> interval yeniden başlatılıyor.");
-        setupInterval();
-        setIsMiningPaused(false);
-        localStorage.setItem("isMiningPaused", "false");
+      if (isMining) {
+        // Her aktivitede önce geçen zamanı kontrol et ve bakiyeyi güncelle
+        updateWalletBasedOnElapsedTime();
+
+        if (!interval) {
+          console.log("Kullanıcı geri döndü -> interval yeniden başlatılıyor.");
+          setupInterval();
+          setIsMiningPaused(false);
+          localStorage.setItem("isMiningPaused", "false");
+        }
       }
     };
 
-    // Mining başlatıldıysa ve geçmiş veri varsa
+    // Mining başlatıldıysa
     if (isMining) {
-      const lastUpdateTime = localStorage.getItem("lastUpdateTime");
-      const currentTime = Date.now();
-
-      // Eğer son güncelleme zamanı varsa, geçen sürede oluşan kazancı hesapla
-      if (lastUpdateTime) {
-        const timeElapsed = currentTime - parseInt(lastUpdateTime);
-        const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
-
-        if (intervalsElapsed > 0) {
-          setWalletAmount((prev) => {
-            const newAmount = parseFloat(
-              (prev + intervalsElapsed * INCREMENT).toFixed(2)
-            );
-            localStorage.setItem("walletAmount", newAmount.toString());
-            return newAmount;
-          });
-        }
-      }
-
-      // Son güncelleme zamanını kaydet ve intervali başlat
-      localStorage.setItem("lastUpdateTime", currentTime.toString());
+      // Geçmiş sürede oluşan kazancı hesapla ve interval başlat
+      updateWalletBasedOnElapsedTime();
       setupInterval();
       resetInactivityTimer();
       setIsMiningPaused(false);
       localStorage.setItem("isMiningPaused", "false");
     }
 
-    // Aktivite dinleyicileri
+    // Mobil ve masaüstü için aktivite dinleyicileri
     window.addEventListener("mousemove", handleActivity);
     window.addEventListener("keydown", handleActivity);
+    window.addEventListener("touchstart", handleActivity);
+    window.addEventListener("touchmove", handleActivity);
+    window.addEventListener("scroll", handleActivity);
     window.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         handleActivity();
       }
     });
 
+    // App focus/blur olayları için
+    window.addEventListener("focus", handleActivity);
+    window.addEventListener("blur", () => {
+      // Sayfa blur olduğunda son zamanı kaydet
+      if (isMining) {
+        localStorage.setItem("lastUpdateTime", Date.now().toString());
+      }
+    });
+
+    // Periyodik kontrolü sağlayan zamanlayıcı
+    const checkTimer = setInterval(() => {
+      if (isMining && !isMiningPaused) {
+        updateWalletBasedOnElapsedTime();
+      }
+    }, 60000); // Her dakika kontrol et
+
     return () => {
       clearInterval(interval);
+      clearInterval(checkTimer);
       clearTimeout(inactivityTimeout);
       window.removeEventListener("mousemove", handleActivity);
       window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("touchstart", handleActivity);
+      window.removeEventListener("touchmove", handleActivity);
+      window.removeEventListener("scroll", handleActivity);
       window.removeEventListener("visibilitychange", handleActivity);
+      window.removeEventListener("focus", handleActivity);
+      window.removeEventListener("blur", handleActivity);
     };
   }, [isMining]);
 
   const startMining = () => {
     // Mining başlatıldığında, ilk kez lastUpdateTime'ı ayarla
-    if (!localStorage.getItem("lastUpdateTime")) {
-      localStorage.setItem("lastUpdateTime", Date.now().toString());
-    }
+    localStorage.setItem("lastUpdateTime", Date.now().toString());
     setIsMining(true);
     setIsMiningPaused(false);
     localStorage.setItem("isMining", "true");
     localStorage.setItem("isMiningPaused", "false");
   };
 
+  const resetBalance = () => {
+    setWalletAmount(0);
+    localStorage.setItem("walletAmount", "0");
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-8">
       <InAppBrowserWarning />
+      <MobileOptimizationInfo />
       <div className="flex flex-col md:flex-row items-center justify-between gap-12">
         <div className="md:w-1/2">
           <motion.h1
@@ -192,6 +233,14 @@ export default function Home() {
               Mining Aktif
             </div>
           )}
+          <motion.button
+            className="bg-red-400 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-full text-lg transition-colors ml-4"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={resetBalance}
+          >
+            Bakiyeyi Sıfırla
+          </motion.button>
         </div>
         <div className="md:w-1/2 flex justify-center">
           <motion.div
