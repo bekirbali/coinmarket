@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import InAppBrowserWarning from "./components/InAppBrowserWarning";
 import MobileOptimizationInfo from "./components/MobileOptimizationInfo";
@@ -15,6 +15,10 @@ export default function Home() {
     currentTime: "Yok",
     timeLeft: "Yok",
   });
+
+  const intervalRef = useRef(null);
+  const debugIntervalRef = useRef(null);
+  const inactivityTimeoutRef = useRef(null);
 
   useEffect(() => {
     // Sayfa yüklendiğinde localStorage'dan verileri kontrol et
@@ -46,9 +50,6 @@ export default function Home() {
     // const INCREMENT = 100;
     const INACTIVITY_LIMIT = 12 * 60 * 60 * 1000; // 12 saat
     // const INACTIVITY_LIMIT = 60000;
-    let interval = null;
-    let inactivityTimeout = null;
-    let debugInterval = null;
 
     const updateWalletBasedOnElapsedTime = () => {
       const lastUpdateTime = localStorage.getItem("lastUpdateTime");
@@ -97,10 +98,10 @@ export default function Home() {
     };
 
     const setupInterval = () => {
-      if (interval) clearInterval(interval);
+      if (intervalRef.current) clearInterval(intervalRef.current);
 
       // interval'ı ayarla
-      interval = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         setWalletAmount((prev) => {
           const newAmount = parseFloat((prev + INCREMENT).toFixed(2));
           const currentTime = Date.now();
@@ -123,12 +124,13 @@ export default function Home() {
     };
 
     const resetInactivityTimer = () => {
-      if (inactivityTimeout) clearTimeout(inactivityTimeout);
+      if (inactivityTimeoutRef.current)
+        clearTimeout(inactivityTimeoutRef.current);
 
-      inactivityTimeout = setTimeout(() => {
+      inactivityTimeoutRef.current = setTimeout(() => {
         console.log("8 saat inaktif -> interval durduruluyor.");
-        clearInterval(interval);
-        interval = null;
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
         setIsMiningPaused(true);
         localStorage.setItem("isMiningPaused", "true");
       }, INACTIVITY_LIMIT);
@@ -140,7 +142,7 @@ export default function Home() {
         // Her aktivitede önce geçen zamanı kontrol et ve bakiyeyi güncelle
         const updated = updateWalletBasedOnElapsedTime();
 
-        if (!interval) {
+        if (!intervalRef.current) {
           console.log("Kullanıcı geri döndü -> interval yeniden başlatılıyor.");
           setupInterval();
           setIsMiningPaused(false);
@@ -151,9 +153,9 @@ export default function Home() {
 
     // Debug bilgilerini sürekli güncelle
     const setupDebugInterval = () => {
-      if (debugInterval) clearInterval(debugInterval);
+      if (debugIntervalRef.current) clearInterval(debugIntervalRef.current);
 
-      debugInterval = setInterval(() => {
+      debugIntervalRef.current = setInterval(() => {
         const lastUpdateTime = localStorage.getItem("lastUpdateTime");
         if (lastUpdateTime && isMining && !isMiningPaused) {
           const currentTime = Date.now();
@@ -250,7 +252,7 @@ export default function Home() {
           updateWalletBasedOnElapsedTime();
 
           // Interval durmuşsa yeniden başlat
-          if (!interval && !isMiningPaused) {
+          if (!intervalRef.current && !isMiningPaused) {
             setupInterval();
           }
         }
@@ -290,24 +292,65 @@ export default function Home() {
     }, 300000); // 5 dakikada bir kontrol et (eskiden 1 dakika)
 
     return () => {
-      clearInterval(interval);
+      clearInterval(intervalRef.current);
       clearInterval(checkTimer);
-      clearInterval(debugInterval);
-      clearTimeout(inactivityTimeout);
+      clearInterval(debugIntervalRef.current);
+      clearTimeout(inactivityTimeoutRef.current);
       window.removeEventListener("mousemove", throttledHandleActivity);
       window.removeEventListener("keydown", throttledHandleActivity);
       window.removeEventListener("touchstart", throttledHandleActivity);
       window.removeEventListener("touchmove", throttledHandleActivity);
       window.removeEventListener("scroll", throttledHandleActivity);
-      window.removeEventListener("visibilitychange", handleActivity);
+      window.removeEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          // Sayfa görünür olduğunda geçen zamanı tam olarak hesapla
+          const lastUpdateTime = localStorage.getItem("lastUpdateTime");
+          if (lastUpdateTime && isMining) {
+            const currentTime = Date.now();
+            const timeElapsed = currentTime - parseInt(lastUpdateTime);
+
+            // Debug bilgisini güncelle
+            setDebugInfo((prev) => ({
+              ...prev,
+              lastUpdateTime: new Date(
+                parseInt(lastUpdateTime)
+              ).toLocaleTimeString(),
+              currentTime: new Date(currentTime).toLocaleTimeString(),
+              timeElapsed: `${Math.floor(timeElapsed / 60000)} dakika`,
+              debugMessage: "Sayfa görünür oldu - geçen süre kontrol ediliyor",
+            }));
+
+            // Zamanı kontrol et ve bakiyeyi güncelle
+            updateWalletBasedOnElapsedTime();
+
+            // Interval durmuşsa yeniden başlat
+            if (!intervalRef.current && !isMiningPaused) {
+              setupInterval();
+            }
+          }
+
+          handleActivity();
+        } else {
+          // Sayfa gizlendiğinde son zamanı KAYDETMİYORUZ! Sadece debug mesajını güncelle
+          if (isMining) {
+            setDebugInfo((prev) => ({
+              ...prev,
+              debugMessage:
+                "Sayfa arka plana alındı - son güncelleme zamanı korunuyor",
+            }));
+          }
+        }
+      });
       window.removeEventListener("focus", handleActivity);
       window.removeEventListener("blur", handleActivity);
     };
   }, [isMining]);
 
   const startMining = () => {
-    // Mining başlatıldığında, ilk kez lastUpdateTime'ı ayarla
-    localStorage.setItem("lastUpdateTime", Date.now().toString());
+    // Mining başlatıldığında, lastUpdateTime'ı kontrol et ve yoksa ayarla
+    if (!localStorage.getItem("lastUpdateTime")) {
+      localStorage.setItem("lastUpdateTime", Date.now().toString());
+    }
     setIsMining(true);
     setIsMiningPaused(false);
     localStorage.setItem("isMining", "true");
