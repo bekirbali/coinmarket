@@ -1,17 +1,23 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 
 export default function MobileOptimizationInfo() {
   const [isOpen, setIsOpen] = useState(true);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
 
-  // Mobil cihaz kontrolü
-  const isMobile = () => {
-    if (typeof window === "undefined") return false;
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    );
-  };
+  // Move mobile detection to useEffect to run only on client
+  useEffect(() => {
+    const checkMobile = () => {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+    };
 
-  if (!isMobile() || !isOpen) return null;
+    setIsMobileDevice(checkMobile());
+  }, []);
+
+  if (!isMobileDevice || !isOpen) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-blue-600 text-white p-4 z-50">
