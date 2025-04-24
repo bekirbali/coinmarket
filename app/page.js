@@ -91,7 +91,7 @@ export default function Home() {
         // Debug bilgilerini güncelle
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 60 * 60 * 1000; // 1 saat
+        const FOUR_HOURS = 30 * 60 * 1000; // 1 saat
         const nextUpdate = lastUpdateTime + FOUR_HOURS;
         const timeLeft = nextUpdate - currentTime;
         const timeElapsed = currentTime - lastUpdateTime;
@@ -158,7 +158,7 @@ export default function Home() {
         const data = docSnap.data();
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 60 * 60 * 1000; // 1 saat
+        const FOUR_HOURS = 30 * 60 * 1000; // 1 saat
         const timeElapsed = currentTime - lastUpdateTime;
         const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
@@ -172,7 +172,6 @@ export default function Home() {
           await updateDoc(minerRef, {
             balance: data.balance + additionalBalance,
             lastUpdateTime: lastUpdateTime + intervalsElapsed * FOUR_HOURS,
-            lastActive: currentTime,
           });
 
           console.log(
