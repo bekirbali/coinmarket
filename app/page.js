@@ -91,7 +91,7 @@ export default function Home() {
         // Debug bilgilerini güncelle
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 30 * 60 * 1000; // 1 saat
+        const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
         const nextUpdate = lastUpdateTime + FOUR_HOURS;
         const timeLeft = nextUpdate - currentTime;
         const timeElapsed = currentTime - lastUpdateTime;
@@ -158,7 +158,7 @@ export default function Home() {
         const data = docSnap.data();
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 30 * 60 * 1000; // 1 saat
+        const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
         const timeElapsed = currentTime - lastUpdateTime;
         const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
