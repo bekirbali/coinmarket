@@ -17,7 +17,7 @@ export default function DebugPanel({
     if (!deviceId || !isMining) return;
 
     const updateDebugInfo = () => {
-      const FOUR_HOURS = 60 * 60 * 1000; // 1 saat
+      const FOUR_HOURS = 30 * 60 * 1000; // 1 saat
       const minerRef = doc(db, "miners", deviceId);
 
       getDoc(minerRef).then((docSnap) => {
@@ -37,17 +37,6 @@ export default function DebugPanel({
               ? (intervalsElapsed * INCREMENT).toFixed(2)
               : "0";
           const nextRewardTime = new Date(nextUpdate).toLocaleTimeString();
-
-          // Firebase'e son aktif zamanı sürekli gönder (telefondan kullanıyorsanız önemli)
-          if (data.lastActive && currentTime - data.lastActive > 60000) {
-            updateDoc(doc(db, "miners", deviceId), {
-              lastActive: currentTime,
-            });
-            console.log(
-              "lastActive otomatik güncellendi: " +
-                new Date(currentTime).toLocaleTimeString()
-            );
-          }
 
           setDebugInfo({
             lastUpdateTime: new Date(lastUpdateTime).toLocaleTimeString(),
@@ -94,7 +83,7 @@ export default function DebugPanel({
       const data = docSnap.data();
       const currentTime = Date.now();
       const lastUpdateTime = data.lastUpdateTime;
-      const FOUR_HOURS = 60 * 60 * 1000; // 1 saat
+      const FOUR_HOURS = 30 * 60 * 1000; // 1 saat
       const timeElapsed = currentTime - lastUpdateTime;
       const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
@@ -105,7 +94,6 @@ export default function DebugPanel({
         await updateDoc(minerRef, {
           balance: data.balance + additionalBalance,
           lastUpdateTime: lastUpdateTime + intervalsElapsed * FOUR_HOURS,
-          lastActive: currentTime,
         });
 
         console.log(
