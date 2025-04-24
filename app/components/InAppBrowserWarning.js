@@ -5,8 +5,15 @@ import { useEffect, useState } from "react";
 const InAppBrowserWarning = () => {
   const [showWarning, setShowWarning] = useState(false);
   const [warningType, setWarningType] = useState("");
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
+
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
 
     const isInstagramBrowser =
@@ -24,9 +31,10 @@ const InAppBrowserWarning = () => {
       setWarningType("inapp");
       setShowWarning(true);
     }
-  }, []);
+  }, [isClient]);
 
-  if (!showWarning) return null;
+  // Don't render anything on server or if no warning needed
+  if (!isClient || !showWarning) return null;
 
   return (
     <div

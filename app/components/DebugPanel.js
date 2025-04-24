@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { motion } from "framer-motion";
@@ -11,10 +11,16 @@ export default function DebugPanel({
   setDebugInfo,
 }) {
   const debugIntervalRef = useRef(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Set isClient to true once component mounts
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Debug bilgilerini güncellemek için
   useEffect(() => {
-    if (!deviceId || !isMining) return;
+    if (!deviceId || !isMining || !isClient) return;
 
     const updateDebugInfo = () => {
       const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
@@ -85,7 +91,7 @@ export default function DebugPanel({
     return () => {
       clearInterval(debugIntervalRef.current);
     };
-  }, [deviceId, isMining, isMiningPaused, setDebugInfo]);
+  }, [deviceId, isMining, isMiningPaused, setDebugInfo, isClient]);
 
   const forceBalanceCheck = async () => {
     if (!deviceId) return;
@@ -122,7 +128,8 @@ export default function DebugPanel({
     }
   };
 
-  if (!isMining) return null;
+  // Early return if server-side rendering or not mining
+  if (!isClient || !isMining) return null;
 
   return (
     <div className="mt-6 bg-gray-800 p-5 rounded-lg text-sm border border-gray-700 shadow-lg">
