@@ -17,7 +17,7 @@ export default function DebugPanel({
     if (!deviceId || !isMining) return;
 
     const updateDebugInfo = () => {
-      const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
+      const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
       const minerRef = doc(db, "miners", deviceId);
 
       getDoc(minerRef).then((docSnap) => {
@@ -38,6 +38,20 @@ export default function DebugPanel({
               : "0";
           const nextRewardTime = new Date(nextUpdate).toLocaleTimeString();
 
+          // İnaktiflik kontrolü
+          const lastActive = data.lastActive || 0;
+          const inactiveTime = currentTime - lastActive;
+          const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 dakika
+          const inactivityPercentage = Math.floor(
+            (inactiveTime / INACTIVITY_LIMIT) * 100
+          );
+          const inactivityStatus =
+            inactiveTime > INACTIVITY_LIMIT
+              ? "İnaktif süre aşıldı! Mining duraklatılmalı."
+              : `İnaktiflik limiti: %${
+                  inactivityPercentage < 100 ? inactivityPercentage : 100
+                }`;
+
           setDebugInfo({
             lastUpdateTime: new Date(lastUpdateTime).toLocaleTimeString(),
             nextUpdateTime: new Date(nextUpdate).toLocaleTimeString(),
@@ -55,6 +69,7 @@ export default function DebugPanel({
             )} dakika`,
             pendingReward: pendingReward,
             nextRewardTime: nextRewardTime,
+            inactivityStatus: inactivityStatus,
             debugMessage:
               timeLeft < 0
                 ? `Güncelleme gecikmesi var! Beklenen ödül: ${pendingReward} birim. Bakiye güncellemesi 5 dakikada bir yapılır.`
@@ -83,7 +98,7 @@ export default function DebugPanel({
       const data = docSnap.data();
       const currentTime = Date.now();
       const lastUpdateTime = data.lastUpdateTime;
-      const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
+      const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
       const timeElapsed = currentTime - lastUpdateTime;
       const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
@@ -173,6 +188,24 @@ export default function DebugPanel({
               }
             >
               {debugInfo.debugMessage}
+            </div>
+          </>
+        )}
+
+        {/* İnaktiflik durum göstergesi */}
+        {debugInfo.inactivityStatus && (
+          <>
+            <div className="text-gray-400 font-medium">İnaktiflik Durumu:</div>
+            <div
+              className={
+                debugInfo.inactivityStatus.includes("aşıldı")
+                  ? "text-red-500 font-bold"
+                  : parseInt(debugInfo.inactivityStatus.match(/\d+/)[0]) > 80
+                  ? "text-yellow-400 font-semibold"
+                  : "text-green-400 font-semibold"
+              }
+            >
+              {debugInfo.inactivityStatus}
             </div>
           </>
         )}

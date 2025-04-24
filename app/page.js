@@ -91,7 +91,7 @@ export default function Home() {
         // Debug bilgilerini güncelle
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
+        const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
         const nextUpdate = lastUpdateTime + FOUR_HOURS;
         const timeLeft = nextUpdate - currentTime;
         const timeElapsed = currentTime - lastUpdateTime;
@@ -126,11 +126,23 @@ export default function Home() {
   useEffect(() => {
     if (!deviceId) return;
 
-    const handleActivity = () => {
+    // Debounce fonksiyonu - çok sık çağrıları birleştirmek için
+    const debounce = (func, delay) => {
+      let timeoutId;
+      return function () {
+        const context = this;
+        const args = arguments;
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(context, args), delay);
+      };
+    };
+
+    // Aktivite işleyicisini debounce ile geciktir (10 saniyede bir güncelle)
+    const handleActivity = debounce(() => {
       updateDoc(doc(db, "miners", deviceId), {
         lastActive: Date.now(),
       });
-    };
+    }, 10000);
 
     // Etkinlik dinleyicileri ekle
     window.addEventListener("mousemove", handleActivity);
@@ -158,7 +170,7 @@ export default function Home() {
         const data = docSnap.data();
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
+        const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
         const timeElapsed = currentTime - lastUpdateTime;
         const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
@@ -191,6 +203,52 @@ export default function Home() {
 
     return () => clearInterval(intervalId);
   }, [deviceId, isMining, isMiningPaused]);
+
+  // İstemci tarafında inaktiflik kontrolü - Firebase Functions'a ek olarak
+  useEffect(() => {
+    if (!deviceId || !isMining) return;
+
+    const checkInactivity = async () => {
+      const minerRef = doc(db, "miners", deviceId);
+      const docSnap = await getDoc(minerRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const currentTime = Date.now();
+        const lastActive = data.lastActive || 0;
+        const inactiveTime = currentTime - lastActive;
+
+        // İnaktiflik limiti (test için 10 dakika)
+        const INACTIVITY_LIMIT = 10 * 60 * 1000;
+
+        console.log(
+          `İstemci inaktiflik kontrolü: ${Math.floor(
+            inactiveTime / 60000
+          )} dakika`
+        );
+
+        if (inactiveTime > INACTIVITY_LIMIT && !data.isMiningPaused) {
+          console.log(
+            `İnaktiflik tespit edildi. Mining duraklatılıyor. İnaktif süre: ${Math.floor(
+              inactiveTime / 60000
+            )} dakika`
+          );
+
+          await updateDoc(minerRef, {
+            isMiningPaused: true,
+          });
+        }
+      }
+    };
+
+    // İlk kontrol
+    checkInactivity();
+
+    // Her 1 dakikada bir inaktiflik kontrolü yap
+    const inactivityInterval = setInterval(checkInactivity, 60000);
+
+    return () => clearInterval(inactivityInterval);
+  }, [deviceId, isMining]);
 
   const startMining = async () => {
     if (!deviceId) return;

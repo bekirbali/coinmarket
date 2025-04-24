@@ -4,11 +4,9 @@ admin.initializeApp();
 
 const db = admin.firestore();
 const INCREMENT = 11.52;
-const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
-// const FOUR_HOURS = 30 * 60 * 1000; // 1 saat (test için)
+const FOUR_HOURS = 5 * 60 * 1000; // 4 dakika (test için)
 // const FOUR_HOURS = 4 * 60 * 60 * 1000; // 4 saat (gerçek değer)
-const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 dakika (test için)
-// const INACTIVITY_LIMIT = 1 * 60 * 60 * 1000; // 1 saat (test için)
+const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 dakika (test için)
 // const INACTIVITY_LIMIT = 12 * 60 * 60 * 1000; // 12 saat
 
 // Düzenli olarak her 5 dakikada bir çalışacak fonksiyon
@@ -57,12 +55,47 @@ exports.updateMinerBalances = functions
             inactiveTime / 1000 / 60
           } dakika`
         );
+
+        // İnaktifliği güncelleme işlemini ekleyelim
         updatePromises.push(
-          db.collection("miners").doc(doc.id).update({
-            isMiningPaused: true,
-          })
+          db
+            .collection("miners")
+            .doc(doc.id)
+            .update({
+              isMiningPaused: true,
+              lastInactivityCheck: now,
+              inactiveTime: inactiveTime,
+              inactivityLimitMs: INACTIVITY_LIMIT,
+            })
+            .then(() => {
+              console.log(
+                `${doc.id} için inaktiflik durumu başarıyla güncellendi.`
+              );
+            })
+            .catch((error) => {
+              console.error(
+                `${doc.id} için inaktiflik güncellemesi başarısız oldu:`,
+                error
+              );
+            })
         );
         return; // Bu kullanıcı için bakiye güncelleme işlemini atla
+      } else {
+        // İnaktif olmayan kullanıcıların son kontrol zamanını güncelle
+        updatePromises.push(
+          db
+            .collection("miners")
+            .doc(doc.id)
+            .update({
+              lastInactivityCheck: now,
+            })
+            .catch((error) => {
+              console.error(
+                `${doc.id} için kontrol zamanı güncellemesi başarısız oldu:`,
+                error
+              );
+            })
+        );
       }
 
       // Bir periyot geçip geçmediğini kontrol et
