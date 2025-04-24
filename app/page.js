@@ -115,7 +115,7 @@ export default function Home() {
         // Debug bilgilerini güncelle
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
+        const FOUR_HOURS = 3 * 60 * 1000; // 3 dakika (test için)
         const nextUpdate = lastUpdateTime + FOUR_HOURS;
         const timeLeft = nextUpdate - currentTime;
         const timeElapsed = currentTime - lastUpdateTime;
@@ -216,13 +216,13 @@ export default function Home() {
         const data = docSnap.data();
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
+        const FOUR_HOURS = 3 * 60 * 1000; // 3 dakika (test için)
         const timeElapsed = currentTime - lastUpdateTime;
         const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
-        // Her 5 dakikada bir bakiyeyi güncelle
+        // Her 3 dakikada bir bakiyeyi güncelle
         if (intervalsElapsed > 0 && data.isMining && !data.isMiningPaused) {
-          // 1 periyot (5 dakika) için 11.52 coin ekle (Firebase fonksiyonuyla aynı değer)
+          // 1 periyot (3 dakika) için 11.52 coin ekle (Firebase fonksiyonuyla aynı değer)
           const INCREMENT = 11.52;
           const additionalBalance = intervalsElapsed * INCREMENT;
 
@@ -264,8 +264,8 @@ export default function Home() {
         const lastActive = data.lastActive || 0;
         const inactiveTime = currentTime - lastActive;
 
-        // İnaktiflik limiti (test için 10 dakika)
-        const INACTIVITY_LIMIT = 10 * 60 * 1000;
+        // İnaktiflik limiti (test için 5 dakika)
+        const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 dakika (test için)
 
         console.log(
           `İstemci inaktiflik kontrolü: ${Math.floor(

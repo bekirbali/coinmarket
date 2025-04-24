@@ -23,7 +23,7 @@ export default function DebugPanel({
     if (!deviceId || !isMining || !isClient) return;
 
     const updateDebugInfo = () => {
-      const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
+      const FOUR_HOURS = 3 * 60 * 1000; // 3 dakika (test için)
       const minerRef = doc(db, "miners", deviceId);
 
       getDoc(minerRef).then((docSnap) => {
@@ -47,7 +47,7 @@ export default function DebugPanel({
           // İnaktiflik kontrolü
           const lastActive = data.lastActive || 0;
           const inactiveTime = currentTime - lastActive;
-          const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 dakika
+          const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 dakika (test için)
           const inactivityPercentage = Math.floor(
             (inactiveTime / INACTIVITY_LIMIT) * 100
           );

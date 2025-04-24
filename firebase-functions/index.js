@@ -4,9 +4,9 @@ admin.initializeApp();
 
 const db = admin.firestore();
 const INCREMENT = 11.52;
-const FOUR_HOURS = 5 * 60 * 1000; // 4 dakika (test için)
+const FOUR_HOURS = 3 * 60 * 1000; // 3 dakika (test için)
 // const FOUR_HOURS = 4 * 60 * 60 * 1000; // 4 saat (gerçek değer)
-const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 dakika (test için)
+const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 dakika (test için)
 // const INACTIVITY_LIMIT = 12 * 60 * 60 * 1000; // 12 saat
 
 // Düzenli olarak her 5 dakikada bir çalışacak fonksiyon
@@ -87,14 +87,16 @@ exports.updateMinerBalances = functions
             })
         );
       }
-      // Kullanıcı inaktifse mining'i duraklat
+      // Kullanıcı inaktifse mining'i duraklat ve bakiye güncellemeyi atla
       else if (
         inactiveTime > INACTIVITY_LIMIT &&
         !minerData.isMiningPaused &&
         minerData.isMining
       ) {
         console.log(
-          `${doc.id} inaktif olduğu için mining duraklatılıyor. İnaktif süre: ${
+          `${
+            doc.id
+          } inaktif olduğu için mining duraklatılıyor ve bakiye güncellenmiyor. İnaktif süre: ${
             inactiveTime / 1000 / 60
           } dakika`
         );
