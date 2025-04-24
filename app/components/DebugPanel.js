@@ -17,7 +17,7 @@ export default function DebugPanel({
     if (!deviceId || !isMining) return;
 
     const updateDebugInfo = () => {
-      const FOUR_HOURS = 30 * 60 * 1000; // 1 saat
+      const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
       const minerRef = doc(db, "miners", deviceId);
 
       getDoc(minerRef).then((docSnap) => {
@@ -83,7 +83,7 @@ export default function DebugPanel({
       const data = docSnap.data();
       const currentTime = Date.now();
       const lastUpdateTime = data.lastUpdateTime;
-      const FOUR_HOURS = 30 * 60 * 1000; // 1 saat
+      const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
       const timeElapsed = currentTime - lastUpdateTime;
       const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
