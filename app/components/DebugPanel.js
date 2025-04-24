@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { motion } from "framer-motion";
@@ -11,13 +11,19 @@ export default function DebugPanel({
   setDebugInfo,
 }) {
   const debugIntervalRef = useRef(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Set isClient to true once component mounts
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Debug bilgilerini güncellemek için
   useEffect(() => {
-    if (!deviceId || !isMining) return;
+    if (!deviceId || !isMining || !isClient) return;
 
     const updateDebugInfo = () => {
-      const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
+      const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
       const minerRef = doc(db, "miners", deviceId);
 
       getDoc(minerRef).then((docSnap) => {
@@ -38,6 +44,20 @@ export default function DebugPanel({
               : "0";
           const nextRewardTime = new Date(nextUpdate).toLocaleTimeString();
 
+          // İnaktiflik kontrolü
+          const lastActive = data.lastActive || 0;
+          const inactiveTime = currentTime - lastActive;
+          const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 dakika
+          const inactivityPercentage = Math.floor(
+            (inactiveTime / INACTIVITY_LIMIT) * 100
+          );
+          const inactivityStatus =
+            inactiveTime > INACTIVITY_LIMIT
+              ? "İnaktif süre aşıldı! Mining duraklatılmalı."
+              : `İnaktiflik limiti: %${
+                  inactivityPercentage < 100 ? inactivityPercentage : 100
+                }`;
+
           setDebugInfo({
             lastUpdateTime: new Date(lastUpdateTime).toLocaleTimeString(),
             nextUpdateTime: new Date(nextUpdate).toLocaleTimeString(),
@@ -55,6 +75,7 @@ export default function DebugPanel({
             )} dakika`,
             pendingReward: pendingReward,
             nextRewardTime: nextRewardTime,
+            inactivityStatus: inactivityStatus,
             debugMessage:
               timeLeft < 0
                 ? `Güncelleme gecikmesi var! Beklenen ödül: ${pendingReward} birim. Bakiye güncellemesi 5 dakikada bir yapılır.`
@@ -70,7 +91,7 @@ export default function DebugPanel({
     return () => {
       clearInterval(debugIntervalRef.current);
     };
-  }, [deviceId, isMining, isMiningPaused, setDebugInfo]);
+  }, [deviceId, isMining, isMiningPaused, setDebugInfo, isClient]);
 
   const forceBalanceCheck = async () => {
     if (!deviceId) return;
@@ -83,7 +104,7 @@ export default function DebugPanel({
       const data = docSnap.data();
       const currentTime = Date.now();
       const lastUpdateTime = data.lastUpdateTime;
-      const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
+      const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
       const timeElapsed = currentTime - lastUpdateTime;
       const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
@@ -107,7 +128,8 @@ export default function DebugPanel({
     }
   };
 
-  if (!isMining) return null;
+  // Early return if server-side rendering or not mining
+  if (!isClient || !isMining) return null;
 
   return (
     <div className="mt-6 bg-gray-800 p-5 rounded-lg text-sm border border-gray-700 shadow-lg">
@@ -173,6 +195,24 @@ export default function DebugPanel({
               }
             >
               {debugInfo.debugMessage}
+            </div>
+          </>
+        )}
+
+        {/* İnaktiflik durum göstergesi */}
+        {debugInfo.inactivityStatus && (
+          <>
+            <div className="text-gray-400 font-medium">İnaktiflik Durumu:</div>
+            <div
+              className={
+                debugInfo.inactivityStatus.includes("aşıldı")
+                  ? "text-red-500 font-bold"
+                  : parseInt(debugInfo.inactivityStatus.match(/\d+/)[0]) > 80
+                  ? "text-yellow-400 font-semibold"
+                  : "text-green-400 font-semibold"
+              }
+            >
+              {debugInfo.inactivityStatus}
             </div>
           </>
         )}

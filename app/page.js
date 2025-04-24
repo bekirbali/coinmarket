@@ -9,10 +9,12 @@ import { db } from "./firebase";
 import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 
 export default function Home() {
+  // Initialize states with null or default values that won't cause hydration mismatches
   const [walletAmount, setWalletAmount] = useState(0);
   const [isMining, setIsMining] = useState(false);
   const [isMiningPaused, setIsMiningPaused] = useState(false);
   const [deviceId, setDeviceId] = useState("");
+  const [isClient, setIsClient] = useState(false); // New state to track client-side rendering
   const [debugInfo, setDebugInfo] = useState({
     lastUpdateTime: "Yok",
     nextUpdateTime: "Yok",
@@ -20,8 +22,15 @@ export default function Home() {
     timeLeft: "Yok",
   });
 
-  // Cihaz ID'si oluştur veya al
+  // Set isClient to true once component mounts (client-side only)
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Cihaz ID'si oluştur veya al - client-side only now
+  useEffect(() => {
+    if (!isClient) return; // Skip on server
+
     const getOrCreateDeviceId = () => {
       let id = localStorage.getItem("deviceId");
       if (!id) {
@@ -37,11 +46,11 @@ export default function Home() {
 
     const id = getOrCreateDeviceId();
     setDeviceId(id);
-  }, []);
+  }, [isClient]); // Only run when isClient becomes true
 
   // Firebase'den veri almak ve realtime güncellemeleri dinlemek için
   useEffect(() => {
-    if (!deviceId) return;
+    if (!deviceId || !isClient) return; // Skip on server
 
     const minerRef = doc(db, "miners", deviceId);
 
@@ -60,10 +69,25 @@ export default function Home() {
           lastActive: Date.now(),
         });
       } else {
-        // Mevcut kullanıcının başlangıçta aktif olduğunu bildir
+        // Mevcut kullanıcı, sayfa tekrar açıldığında
+        const data = docSnap.data();
+
+        // Kullanıcı aktif olduğunu bildir
         await updateDoc(minerRef, {
           lastActive: Date.now(),
         });
+
+        // Eğer mining durdurulmuşsa (isMiningPaused=true) ve kullanıcı mining yapmak istiyorsa (isMining=true)
+        // otomatik olarak mining'i yeniden başlat
+        if (data.isMiningPaused && data.isMining) {
+          console.log(
+            "Sayfa açıldı ve kullanıcı aktif. Mining otomatik olarak yeniden başlatılıyor..."
+          );
+          await updateDoc(minerRef, {
+            isMiningPaused: false,
+            lastUpdateTime: Date.now(), // İnaktif süre için bakiye verme
+          });
+        }
       }
     };
 
@@ -91,7 +115,7 @@ export default function Home() {
         // Debug bilgilerini güncelle
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
+        const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
         const nextUpdate = lastUpdateTime + FOUR_HOURS;
         const timeLeft = nextUpdate - currentTime;
         const timeElapsed = currentTime - lastUpdateTime;
@@ -120,17 +144,51 @@ export default function Home() {
       unsubscribe();
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [deviceId]);
+  }, [deviceId, isClient]);
 
+  // Other useEffects should also check for isClient
   // Kullanıcı aktivitesini takip et
   useEffect(() => {
-    if (!deviceId) return;
+    if (!deviceId || !isClient) return; // Skip on server
 
-    const handleActivity = () => {
-      updateDoc(doc(db, "miners", deviceId), {
-        lastActive: Date.now(),
-      });
+    // Debounce fonksiyonu - çok sık çağrıları birleştirmek için
+    const debounce = (func, delay) => {
+      let timeoutId;
+      return function () {
+        const context = this;
+        const args = arguments;
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(context, args), delay);
+      };
     };
+
+    // Aktivite işleyicisini debounce ile geciktir (10 saniyede bir güncelle)
+    const handleActivity = debounce(async () => {
+      const minerRef = doc(db, "miners", deviceId);
+      const docSnap = await getDoc(minerRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+
+        // Önce lastActive değerini her zaman güncelle
+        await updateDoc(minerRef, {
+          lastActive: Date.now(),
+        });
+
+        // Eğer mining durdurulmuşsa (isMiningPaused=true) ve kullanıcı mining yapmak istiyorsa (isMining=true)
+        // otomatik olarak mining'i yeniden başlat
+        if (data.isMiningPaused && data.isMining) {
+          console.log("Kullanıcı aktif oldu. Mining yeniden başlatılıyor...");
+
+          // Mining'i yeniden başlatırken lastUpdateTime'ı da güncelle
+          // Böylece inaktif süre için bakiye hesaplanmayacak
+          await updateDoc(minerRef, {
+            isMiningPaused: false,
+            lastUpdateTime: Date.now(), // ÖNEMLİ: Şimdiki zamanı kullan, inaktif süre için bakiye verme
+          });
+        }
+      }
+    }, 10000);
 
     // Etkinlik dinleyicileri ekle
     window.addEventListener("mousemove", handleActivity);
@@ -144,11 +202,11 @@ export default function Home() {
       window.removeEventListener("touchstart", handleActivity);
       window.removeEventListener("scroll", handleActivity);
     };
-  }, [deviceId]);
+  }, [deviceId, isClient]);
 
   // Mining durumunu ve bakiyeyi periyodik olarak kontrol edip güncelle
   useEffect(() => {
-    if (!deviceId || !isMining || isMiningPaused) return;
+    if (!deviceId || !isMining || isMiningPaused || !isClient) return; // Skip on server
 
     const checkAndUpdateMiningProgress = async () => {
       const minerRef = doc(db, "miners", deviceId);
@@ -158,7 +216,7 @@ export default function Home() {
         const data = docSnap.data();
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
-        const FOUR_HOURS = 10 * 60 * 1000; // 10 dakika (test için)
+        const FOUR_HOURS = 5 * 60 * 1000; // 5 dakika (test için)
         const timeElapsed = currentTime - lastUpdateTime;
         const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
 
@@ -190,7 +248,53 @@ export default function Home() {
     const intervalId = setInterval(checkAndUpdateMiningProgress, 30000);
 
     return () => clearInterval(intervalId);
-  }, [deviceId, isMining, isMiningPaused]);
+  }, [deviceId, isMining, isMiningPaused, isClient]);
+
+  // İstemci tarafında inaktiflik kontrolü - Firebase Functions'a ek olarak
+  useEffect(() => {
+    if (!deviceId || !isMining || !isClient) return; // Skip on server
+
+    const checkInactivity = async () => {
+      const minerRef = doc(db, "miners", deviceId);
+      const docSnap = await getDoc(minerRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const currentTime = Date.now();
+        const lastActive = data.lastActive || 0;
+        const inactiveTime = currentTime - lastActive;
+
+        // İnaktiflik limiti (test için 10 dakika)
+        const INACTIVITY_LIMIT = 10 * 60 * 1000;
+
+        console.log(
+          `İstemci inaktiflik kontrolü: ${Math.floor(
+            inactiveTime / 60000
+          )} dakika`
+        );
+
+        if (inactiveTime > INACTIVITY_LIMIT && !data.isMiningPaused) {
+          console.log(
+            `İnaktiflik tespit edildi. Mining duraklatılıyor. İnaktif süre: ${Math.floor(
+              inactiveTime / 60000
+            )} dakika`
+          );
+
+          await updateDoc(minerRef, {
+            isMiningPaused: true,
+          });
+        }
+      }
+    };
+
+    // İlk kontrol
+    checkInactivity();
+
+    // Her 1 dakikada bir inaktiflik kontrolü yap
+    const inactivityInterval = setInterval(checkInactivity, 60000);
+
+    return () => clearInterval(inactivityInterval);
+  }, [deviceId, isMining, isClient]);
 
   const startMining = async () => {
     if (!deviceId) return;
@@ -216,6 +320,11 @@ export default function Home() {
       lastActive: Date.now(),
     });
   };
+
+  // If not client-side yet, show a simple loading state
+  if (!isClient) {
+    return <div className="max-w-6xl mx-auto p-8">Yükleniyor...</div>;
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-8">

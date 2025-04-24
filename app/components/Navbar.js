@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -69,7 +74,7 @@ export default function Navbar() {
       {/* Mobile Navigation Menu */}
       <div
         className={`md:hidden ${
-          isMenuOpen ? "block" : "hidden"
+          isMenuOpen && isClient ? "block" : "hidden"
         } mt-4 w-1/2 ml-auto rounded-xl bg-black shadow-lg absolute right-4 top-16 z-50`}
       >
         <ul className="flex flex-col gap-4 p-4">

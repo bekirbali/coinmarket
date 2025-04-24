@@ -5,9 +5,17 @@ import { useState, useEffect } from "react";
 export default function MobileOptimizationInfo() {
   const [isOpen, setIsOpen] = useState(true);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // Set client flag
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Move mobile detection to useEffect to run only on client
   useEffect(() => {
+    if (!isClient) return;
+
     const checkMobile = () => {
       return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
@@ -15,9 +23,10 @@ export default function MobileOptimizationInfo() {
     };
 
     setIsMobileDevice(checkMobile());
-  }, []);
+  }, [isClient]);
 
-  if (!isMobileDevice || !isOpen) return null;
+  // Don't render anything on server or if conditions not met
+  if (!isClient || !isMobileDevice || !isOpen) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-blue-600 text-white p-4 z-50">
