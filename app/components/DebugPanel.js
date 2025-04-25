@@ -12,10 +12,28 @@ export default function DebugPanel({
 }) {
   const debugIntervalRef = useRef(null);
   const [isClient, setIsClient] = useState(false);
+  const [visibilityState, setVisibilityState] = useState("visible");
 
   // Set isClient to true once component mounts
   useEffect(() => {
     setIsClient(true);
+
+    if (typeof document !== "undefined") {
+      setVisibilityState(document.visibilityState);
+
+      const handleVisibilityChange = () => {
+        setVisibilityState(document.visibilityState);
+      };
+
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+
+      return () => {
+        document.removeEventListener(
+          "visibilitychange",
+          handleVisibilityChange
+        );
+      };
+    }
   }, []);
 
   // Debug bilgilerini güncellemek için
@@ -216,6 +234,22 @@ export default function DebugPanel({
             </div>
           </>
         )}
+
+        {/* Görünürlük durumu göstergesi */}
+        <>
+          <div className="text-gray-400 font-medium">Görünürlük Durumu:</div>
+          <div
+            className={
+              visibilityState === "visible"
+                ? "text-green-400 font-semibold"
+                : "text-red-500 font-bold"
+            }
+          >
+            {visibilityState === "visible"
+              ? "Ön Planda (Aktif)"
+              : "Arka Planda (Pasif)"}
+          </div>
+        </>
       </div>
 
       <button
