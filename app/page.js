@@ -296,6 +296,62 @@ export default function Home() {
     return () => clearInterval(inactivityInterval);
   }, [deviceId, isMining, isClient]);
 
+  // Uygulama arka plana atıldığında mining'i durdur, öne geldiğinde devam ettir
+  useEffect(() => {
+    if (!deviceId || !isClient) return; // Skip on server
+
+    const handleVisibilityChange = async () => {
+      const minerRef = doc(db, "miners", deviceId);
+
+      if (document.visibilityState === "hidden") {
+        // Uygulama arka plana atıldı
+        console.log(
+          "Uygulama arka plana atıldı. İnaktiflik kontrolü devam ediyor..."
+        );
+
+        // Sadece lastActive'i güncelle, mining'i hemen durdurma
+        const docSnap = await getDoc(minerRef);
+        if (docSnap.exists()) {
+          await updateDoc(minerRef, {
+            lastActive: Date.now(), // Son aktif zamanı güncelle
+          });
+        }
+      } else if (document.visibilityState === "visible") {
+        // Uygulama tekrar öne getirildi
+        console.log(
+          "Uygulama tekrar öne getirildi. Kullanıcı aktif kabul ediliyor..."
+        );
+
+        const docSnap = await getDoc(minerRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+
+          // Kullanıcı aktif olduğunu bildir
+          await updateDoc(minerRef, {
+            lastActive: Date.now(),
+          });
+
+          // Eğer mining durdurulmuşsa (isMiningPaused=true) ve kullanıcı mining yapmak istiyorsa (isMining=true)
+          // otomatik olarak mining'i yeniden başlat
+          if (data.isMiningPaused && data.isMining) {
+            console.log("Uygulama aktif oldu. Mining yeniden başlatılıyor...");
+            await updateDoc(minerRef, {
+              isMiningPaused: false,
+              lastUpdateTime: Date.now(), // ÖNEMLİ: Şimdiki zamanı kullan, inaktif süre için bakiye verme
+            });
+          }
+        }
+      }
+    };
+
+    // visibilitychange olayını dinle
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [deviceId, isClient]);
+
   const startMining = async () => {
     if (!deviceId) return;
 

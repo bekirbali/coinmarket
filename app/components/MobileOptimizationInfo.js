@@ -36,6 +36,8 @@ export default function MobileOptimizationInfo() {
           <p className="text-sm mt-1">
             Mining işleminin düzgün çalışması için lütfen uygulamayı açık tutun.
             Periyodik olarak ekrana dokunmanız veya kaydırma yapmanız önerilir.
+            Uygulama arka planda 5 dakikadan fazla inaktif kalırsa mining işlemi
+            otomatik olarak duraklatılacaktır.
           </p>
         </div>
         <button
