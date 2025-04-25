@@ -15,6 +15,7 @@ export default function Home() {
   const [isMiningPaused, setIsMiningPaused] = useState(false);
   const [deviceId, setDeviceId] = useState("");
   const [isClient, setIsClient] = useState(false); // New state to track client-side rendering
+  const [inactivityWorker, setInactivityWorker] = useState(null);
   const [debugInfo, setDebugInfo] = useState({
     lastUpdateTime: "Yok",
     nextUpdateTime: "Yok",
@@ -146,10 +147,51 @@ export default function Home() {
     };
   }, [deviceId, isClient]);
 
-  // Other useEffects should also check for isClient
   // Kullanıcı aktivitesini takip et
   useEffect(() => {
     if (!deviceId || !isClient) return; // Skip on server
+
+    // Web Worker'ı başlat - browser arka planda olsa bile çalışacak
+    let worker = null;
+    if (window.Worker && isMining) {
+      try {
+        worker = new Worker("/inactivity-worker.js");
+        setInactivityWorker(worker);
+
+        // Worker başlatıldı
+        worker.postMessage({ type: "start" });
+
+        // Worker'dan gelen mesajları dinle
+        worker.addEventListener("message", async (event) => {
+          const message = event.data;
+
+          if (message.type === "inactivity_detected") {
+            console.log(
+              `Web Worker inaktiflik tespit etti: ${Math.floor(
+                message.inactiveTime / 60000
+              )} dakika`
+            );
+
+            // Mining'i durdur
+            const minerRef = doc(db, "miners", deviceId);
+            const docSnap = await getDoc(minerRef);
+
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              if (data.isMining && !data.isMiningPaused) {
+                console.log("Web Worker: Mining duraklatılıyor");
+                await updateDoc(minerRef, {
+                  isMiningPaused: true,
+                  lastInactiveTimestamp: message.timestamp,
+                });
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.error("Web Worker oluşturulamadı:", error);
+      }
+    }
 
     // Debounce fonksiyonu - çok sık çağrıları birleştirmek için
     const debounce = (func, delay) => {
@@ -162,10 +204,20 @@ export default function Home() {
       };
     };
 
-    // Aktivite işleyicisini debounce ile geciktir (10 saniyede bir güncelle)
+    // Worker'a aktivite bildir
+    const updateWorkerActivity = () => {
+      if (worker) {
+        worker.postMessage({ type: "ping" });
+      }
+    };
+
+    // Aktivite işleyicisini debounce ile geciktir
     const handleActivity = debounce(async () => {
       const minerRef = doc(db, "miners", deviceId);
       const docSnap = await getDoc(minerRef);
+
+      // Worker'a da aktivite bildir
+      updateWorkerActivity();
 
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -188,7 +240,7 @@ export default function Home() {
           });
         }
       }
-    }, 10000);
+    }, 5000);
 
     // Etkinlik dinleyicileri ekle
     window.addEventListener("mousemove", handleActivity);
@@ -196,13 +248,26 @@ export default function Home() {
     window.addEventListener("touchstart", handleActivity);
     window.addEventListener("scroll", handleActivity);
 
+    // Düzenli olarak worker'a ping gönder (60 saniyede bir)
+    const pingInterval = setInterval(updateWorkerActivity, 60000);
+
     return () => {
+      // Etkinlik dinleyicilerini kaldır
       window.removeEventListener("mousemove", handleActivity);
       window.removeEventListener("keydown", handleActivity);
       window.removeEventListener("touchstart", handleActivity);
       window.removeEventListener("scroll", handleActivity);
+
+      // Worker'ı temizle
+      if (worker) {
+        worker.postMessage({ type: "stop" });
+        worker.terminate();
+        setInactivityWorker(null);
+      }
+
+      clearInterval(pingInterval);
     };
-  }, [deviceId, isClient]);
+  }, [deviceId, isClient, isMining]);
 
   // Mining durumunu ve bakiyeyi periyodik olarak kontrol edip güncelle
   useEffect(() => {
@@ -216,6 +281,22 @@ export default function Home() {
         const data = docSnap.data();
         const currentTime = Date.now();
         const lastUpdateTime = data.lastUpdateTime;
+        const lastActive = data.lastActive || 0;
+        const inactiveTime = currentTime - lastActive;
+        const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 dakika (test için)
+
+        // İnaktiflik kontrolünü bakiye güncellemeden önce de yap
+        if (inactiveTime > INACTIVITY_LIMIT) {
+          console.log(
+            `Bakiye güncellemeden önce inaktiflik tespit edildi. Mining duraklatılıyor.`
+          );
+          await updateDoc(minerRef, {
+            isMiningPaused: true,
+            lastInactiveTimestamp: currentTime,
+          });
+          return; // İnaktifse bakiyeyi güncelleme
+        }
+
         const FOUR_HOURS = 3 * 60 * 1000; // 3 dakika (test için)
         const timeElapsed = currentTime - lastUpdateTime;
         const intervalsElapsed = Math.floor(timeElapsed / FOUR_HOURS);
@@ -250,53 +331,7 @@ export default function Home() {
     return () => clearInterval(intervalId);
   }, [deviceId, isMining, isMiningPaused, isClient]);
 
-  // İstemci tarafında inaktiflik kontrolü - Firebase Functions'a ek olarak
-  useEffect(() => {
-    if (!deviceId || !isMining || !isClient) return; // Skip on server
-
-    const checkInactivity = async () => {
-      const minerRef = doc(db, "miners", deviceId);
-      const docSnap = await getDoc(minerRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const currentTime = Date.now();
-        const lastActive = data.lastActive || 0;
-        const inactiveTime = currentTime - lastActive;
-
-        // İnaktiflik limiti (test için 5 dakika)
-        const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 dakika (test için)
-
-        console.log(
-          `İstemci inaktiflik kontrolü: ${Math.floor(
-            inactiveTime / 60000
-          )} dakika`
-        );
-
-        if (inactiveTime > INACTIVITY_LIMIT && !data.isMiningPaused) {
-          console.log(
-            `İnaktiflik tespit edildi. Mining duraklatılıyor. İnaktif süre: ${Math.floor(
-              inactiveTime / 60000
-            )} dakika`
-          );
-
-          await updateDoc(minerRef, {
-            isMiningPaused: true,
-          });
-        }
-      }
-    };
-
-    // İlk kontrol
-    checkInactivity();
-
-    // Her 1 dakikada bir inaktiflik kontrolü yap
-    const inactivityInterval = setInterval(checkInactivity, 60000);
-
-    return () => clearInterval(inactivityInterval);
-  }, [deviceId, isMining, isClient]);
-
-  // Uygulama arka plana atıldığında mining'i durdur, öne geldiğinde devam ettir
+  // Uygulama arka plana atıldığında veya öne getirildiğinde
   useEffect(() => {
     if (!deviceId || !isClient) return; // Skip on server
 
@@ -308,6 +343,11 @@ export default function Home() {
         console.log(
           "Uygulama arka plana atıldı. İnaktiflik kontrolü devam ediyor..."
         );
+
+        // Web Worker'a son aktivite bilgisi gönder
+        if (inactivityWorker) {
+          inactivityWorker.postMessage({ type: "ping" });
+        }
 
         // Sadece lastActive'i güncelle, mining'i hemen durdurma
         const docSnap = await getDoc(minerRef);
@@ -321,6 +361,11 @@ export default function Home() {
         console.log(
           "Uygulama tekrar öne getirildi. Kullanıcı aktif kabul ediliyor..."
         );
+
+        // Web Worker'a son aktivite bilgisi gönder
+        if (inactivityWorker) {
+          inactivityWorker.postMessage({ type: "ping" });
+        }
 
         const docSnap = await getDoc(minerRef);
         if (docSnap.exists()) {
@@ -350,7 +395,7 @@ export default function Home() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [deviceId, isClient]);
+  }, [deviceId, isClient, inactivityWorker]);
 
   const startMining = async () => {
     if (!deviceId) return;
