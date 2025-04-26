@@ -244,3 +244,41 @@ exports.checkAndUpdateMiner = functions.https.onRequest(async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 });
+
+// Heartbeat fonksiyonu: Client'tan gelen sinyal ile lastActive zamanını günceller
+exports.heartbeat = functions.https.onCall(async (data, context) => {
+  // Gelen veriyi doğrula
+  const deviceId = data.deviceId;
+  if (!deviceId || typeof deviceId !== "string") {
+    console.error("Geçersiz deviceId:", deviceId);
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Fonksiyon çağrılırken geçerli bir 'deviceId' sağlanmalı."
+    );
+  }
+
+  console.log(`Heartbeat alındı: ${deviceId}`);
+
+  const minerRef = db.collection("miners").doc(deviceId);
+
+  try {
+    await minerRef.update({
+      // Sunucu saatini kullanmak daha güvenilirdir
+      lastActive: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    console.log(`${deviceId} için lastActive güncellendi.`);
+    return { success: true };
+  } catch (error) {
+    console.error(
+      `${deviceId} için lastActive güncellenirken hata oluştu:`,
+      error
+    );
+    // Belki doküman henüz yoktur, kontrol edilebilir veya hatayı yoksayabiliriz.
+    // Şimdilik hatayı istemciye iletiyoruz.
+    throw new functions.https.HttpsError(
+      "unknown",
+      "lastActive güncellenirken bir hata oluştu.",
+      error.message
+    );
+  }
+});
