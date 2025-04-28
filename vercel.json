@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/mining/check-inactivity",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
